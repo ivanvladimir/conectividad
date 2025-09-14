@@ -133,3 +133,10 @@ cython_debug/
 .ruff_cache
 
 .idea
+
+*.db
+*.sqlite
+*.sqlite3
+crudadmin_data/
+*.db-journal
+*.sqlite3-journal
