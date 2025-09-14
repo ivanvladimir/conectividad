@@ -33,11 +33,15 @@ COPY --from=builder --chown=app:app /app/.venv /app/.venv
 # Ensure the virtual environment is in the PATH
 ENV PATH="/app/.venv/bin:$PATH"
 
+RUN chown -R app:app /app
+
 # Switch to the non-root user
-USER app
+#USER app
 
 # Set the working directory
 WORKDIR /code
+
+#RUN chown -R app:app /code
 
 # -------- replace with comment to run with gunicorn --------
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]

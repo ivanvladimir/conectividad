@@ -1,4 +1,5 @@
 version = 1
+revision = 1
 requires-python = ">=3.11, <4"
 
 [[package]]
@@ -368,11 +369,13 @@ dependencies = [
     { name = "bcrypt" },
     { name = "crudadmin" },
     { name = "fastapi" },
+    { name = "fastapi-tailwind" },
     { name = "fastcrud" },
     { name = "greenlet" },
     { name = "gunicorn" },
     { name = "httptools" },
     { name = "httpx" },
+    { name = "markdown" },
     { name = "mypy" },
     { name = "psycopg2-binary" },
     { name = "pydantic", extra = ["email"] },
@@ -413,11 +416,13 @@ requires-dist = [
     { name = "crudadmin", specifier = ">=0.4.2" },
     { name = "faker", marker = "extra == 'dev'", specifier = ">=26.0.0" },
     { name = "fastapi", specifier = ">=0.109.1" },
+    { name = "fastapi-tailwind", specifier = ">=2.0.4a1" },
     { name = "fastcrud", specifier = ">=0.15.5" },
     { name = "greenlet", specifier = ">=2.0.2" },
     { name = "gunicorn", specifier = ">=23.0.0" },
     { name = "httptools", specifier = ">=0.6.1" },
     { name = "httpx", specifier = ">=0.26.0" },
+    { name = "markdown", specifier = ">=3.9" },
     { name = "mypy", specifier = ">=1.16.0" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.8.0" },
     { name = "psycopg2-binary", specifier = ">=2.9.9" },
@@ -438,9 +443,26 @@ requires-dist = [
     { name = "uvicorn", specifier = ">=0.27.0" },
     { name = "uvloop", specifier = ">=0.19.0" },
 ]
+provides-extras = ["dev"]
 
 [package.metadata.requires-dev]
 dev = [{ name = "pytest-asyncio", specifier = ">=1.0.0" }]
+
+[[package]]
+name = "fastapi-tailwind"
+version = "2.0.4a1"
+source = { registry = "https://pypi.org/simple" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/8f/25/65d75ea5755f6bb434792c65b6dc5a3bfd431337c534bb69062061c47769/fastapi_tailwind-2.0.4a1-py3-none-macosx_10_9_arm64.whl", hash = "sha256:f66285ed4110c70eb8f76fe79babbfdee0f9347ad3772361aa98bc5840bc824a", size = 27435032 },
+    { url = "https://files.pythonhosted.org/packages/0b/5d/54e1b4abe96a713b187519246f92c4d006b3e6b1c4fdc6729cb3ad5f3fbf/fastapi_tailwind-2.0.4a1-py3-none-macosx_10_9_x86_64.whl", hash = "sha256:9b7d6a353fcd3ce2801d3fab92ea4c6aa885fd5fc8f422995d6dc9ba301f0bec", size = 29026594 },
+    { url = "https://files.pythonhosted.org/packages/22/8d/7181b1082b8543c19e55fc7b984aebae41b6ea8a935dc5d8425c4fd88932/fastapi_tailwind-2.0.4a1-py3-none-macosx_11_0_arm64.whl", hash = "sha256:7fface9db6e857c4f6fee911d105ad8fc122182c49b47a9eca1c69402b8fa4aa", size = 27435031 },
+    { url = "https://files.pythonhosted.org/packages/2e/ea/fffb59b7fb84c73434a58faddf82ebeeb362656c25f1dc75d17ad49afa60/fastapi_tailwind-2.0.4a1-py3-none-macosx_11_0_x86_64.whl", hash = "sha256:41f6ca75d3b2b8f71ae79f8e43df7827d13fce97cf2d1eef1349aba5d8ae34fa", size = 29026593 },
+    { url = "https://files.pythonhosted.org/packages/41/67/8f5b2fcbcc646de44244528a654b52bda6677fc3b51030b62274e15285eb/fastapi_tailwind-2.0.4a1-py3-none-manylinux2014_aarch64.whl", hash = "sha256:3156edfff1a1375ef0b825267f793fa0eabf68c9c0ff36535ccadc5a99bfe416", size = 42897865 },
+    { url = "https://files.pythonhosted.org/packages/fe/d9/e11c8b37d9298119769bb8dabdd2b1e186434c1514049a12985eb71d65d1/fastapi_tailwind-2.0.4a1-py3-none-manylinux2014_x86_64.whl", hash = "sha256:1d72cb949c7f509e67e0424daee365b4640e7c1a087f29430d643468bc41376c", size = 44681236 },
+    { url = "https://files.pythonhosted.org/packages/94/24/c050046ab35d06959e1144615d5ffdc1707af197886e63b35ce6f46adbd7/fastapi_tailwind-2.0.4a1-py3-none-musllinux_1_2_aarch64.whl", hash = "sha256:5e16efe827ba44d45a59b195d59a6f17d120cb4394069477e831fbd574802fcc", size = 40838788 },
+    { url = "https://files.pythonhosted.org/packages/95/36/aa5a939b31bf88bf48f18bbeb2ca7bbb31d28b96fd7235093f8c59c92cb0/fastapi_tailwind-2.0.4a1-py3-none-musllinux_1_2_x86_64.whl", hash = "sha256:3934b63e2bf23b42a3cdf6b97a8f17d2ff3ac20d7a011f054e2d6cc8287cd4ce", size = 42289518 },
+    { url = "https://files.pythonhosted.org/packages/26/76/a857b0407ce71a43ce15683383d99eac0167f61294e6387c524b9abfd7f9/fastapi_tailwind-2.0.4a1-py3-none-win_amd64.whl", hash = "sha256:374cc85380e7030e1a12dc7e0b73b65c0ca504d573f0209b2b6f41294b313c69", size = 45700405 },
+]
 
 [[package]]
 name = "fastcrud"
@@ -670,6 +692,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/9e/38/bd5b78a920a64d708fe6bc8e0a2c075e1389d53bef8413725c63ba041535/mako-1.3.10.tar.gz", hash = "sha256:99579a6f39583fa7e5630a28c3c1f440e4e97a414b80372649c0ce338da2ea28", size = 392474 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/87/fb/99f81ac72ae23375f22b7afdb7642aba97c00a713c217124420147681a2f/mako-1.3.10-py3-none-any.whl", hash = "sha256:baef24a52fc4fc514a0887ac600f9f1cff3d82c61d4d700a1fa84d597b88db59", size = 78509 },
+]
+
+[[package]]
+name = "markdown"
+version = "3.9"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/8d/37/02347f6d6d8279247a5837082ebc26fc0d5aaeaf75aa013fcbb433c777ab/markdown-3.9.tar.gz", hash = "sha256:d2900fe1782bd33bdbbd56859defef70c2e78fc46668f8eb9df3128138f2cb6a", size = 364585 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/70/ae/44c4a6a4cbb496d93c6257954260fe3a6e91b7bed2240e5dad2a717f5111/markdown-3.9-py3-none-any.whl", hash = "sha256:9f4d91ed810864ea88a6f32c07ba8bee1346c0cc1f6b1f9f6c822f2a9667d280", size = 107441 },
 ]
 
 [[package]]

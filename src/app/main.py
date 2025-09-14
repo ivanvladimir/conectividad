@@ -4,12 +4,12 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from .admin.initialize import create_admin_interface
-from .api import router
+from .api import router as api_router
+from .front import router as front_router
 from .core.config import settings
 from .core.setup import create_application, lifespan_factory
 
 admin = create_admin_interface()
-
 
 @asynccontextmanager
 async def lifespan_with_admin(app: FastAPI) -> AsyncGenerator[None, None]:
@@ -27,7 +27,7 @@ async def lifespan_with_admin(app: FastAPI) -> AsyncGenerator[None, None]:
         yield
 
 
-app = create_application(router=router, settings=settings, lifespan=lifespan_with_admin)
+app = create_application(front_router=front_router, api_router=api_router, settings=settings, lifespan=lifespan_with_admin)
 
 # Mount admin interface if enabled
 if admin:

@@ -10,6 +10,8 @@ from arq.connections import RedisSettings
 from fastapi import APIRouter, Depends, FastAPI
 from fastapi.openapi.docs import get_redoc_html, get_swagger_ui_html
 from fastapi.openapi.utils import get_openapi
+from fastapi.staticfiles import StaticFiles
+from fastapi_tailwind import tailwind
 
 from ..api.dependencies import get_current_superuser
 from ..core.utils.rate_limit import rate_limiter
@@ -73,6 +75,7 @@ async def set_threadpool_tokens(number_of_tokens: int = 100) -> None:
     limiter = anyio.to_thread.current_default_thread_limiter()
     limiter.total_tokens = number_of_tokens
 
+static_files = StaticFiles(directory="src/app/static")
 
 def lifespan_factory(
     settings: (
@@ -110,6 +113,11 @@ def lifespan_factory(
             if create_tables_on_start:
                 await create_tables()
 
+            process = tailwind.compile(
+                static_files.directory + "/output.css",
+                tailwind_stylesheet_path = "./src/app/resources/input.css"
+            )
+
             initialization_complete.set()
 
             yield
@@ -123,13 +131,16 @@ def lifespan_factory(
 
             if isinstance(settings, RedisRateLimiterSettings):
                 await close_redis_rate_limit_pool()
+            if process:
+                process.terminate()
 
     return lifespan
 
 
 # -------------- application --------------
 def create_application(
-    router: APIRouter,
+    front_router: APIRouter,
+    api_router: APIRouter,
     settings: (
         DatabaseSettings
         | RedisCacheSettings
@@ -150,8 +161,13 @@ def create_application(
 
     Parameters
     ----------
-    router : APIRouter
+    front_router : FrontRouter
+        The FrontRouter object containing the routes to be included in the webapp application.
+
+    api_router : APIRouter
         The APIRouter object containing the routes to be included in the FastAPI application.
+
+
 
     settings
         An instance representing the settings for configuring the FastAPI application.
@@ -201,7 +217,10 @@ def create_application(
         lifespan = lifespan_factory(settings, create_tables_on_start=create_tables_on_start)
 
     application = FastAPI(lifespan=lifespan, **kwargs)
-    application.include_router(router)
+    application.include_router(front_router)
+    application.include_router(api_router)
+
+    application.mount("/static", static_files, name="static")
 
     if isinstance(settings, ClientSideCacheSettings):
         application.add_middleware(ClientCacheMiddleware, max_age=settings.CLIENT_CACHE_MAX_AGE)

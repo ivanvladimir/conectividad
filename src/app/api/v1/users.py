@@ -84,7 +84,7 @@ async def patch_user(
     if db_user is None:
         raise NotFoundException("User not found")
 
-    db_user = cast(UserRead, db_user)
+    db_user = UserRead(**db_user)
     if db_user.username != current_user["username"]:
         raise ForbiddenException()
 

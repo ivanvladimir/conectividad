@@ -134,6 +134,8 @@ cython_debug/
 
 .idea
 
+src/.env
+
 *.db
 *.sqlite
 *.sqlite3

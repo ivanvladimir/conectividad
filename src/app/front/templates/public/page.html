@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+
+{% block title %}
+  {{metadata.title[0] | string }} - Página
+{% endblock %}
+
+{% block header %}
+  Visualizador de páginas
+{% endblock %}
+
+{% block subheader %}
+  {{metadata.subtitle[0] | string }}
+{% endblock %}
+
+{% block content %}
+
+  {{content | safe}}
+
+{% endblock %}
