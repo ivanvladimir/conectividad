@@ -1,1 +1,7 @@
 @import "tailwindcss";
+@plugin "./daisyui.js";
+
+/* Optional for custom themes – Docs: https://daisyui.com/docs/themes/#how-to-add-a-new-custom-theme */
+@plugin "./daisyui-theme.js"{
+  themes: light --default, dark --prefersdark, bumblebee;
+}
