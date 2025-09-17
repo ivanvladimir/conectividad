@@ -53,6 +53,16 @@ services:
     ports:
       - "6379:6379"
 
+  meilisearch:
+    image: 'getmeili/meilisearch:v1.16'
+    env_file:
+      - ./src/.env
+    ports: 
+      - "7700:7700"
+    volumes:
+      - meili-data:/data
+
+
   #-------- uncomment to run with pgadmin --------
   # pgadmin:
   #   container_name: pgadmin4
@@ -108,4 +118,5 @@ services:
 volumes:
   postgres-data:
   redis-data:
+  meili-data:
   #pgadmin-data:

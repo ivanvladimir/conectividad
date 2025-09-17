@@ -1,8 +1,8 @@
 ---
-title: Proyecto Selene
+title: Conectividad
 ---
 
-### Proyecto Selene
+# Conectividad
 
 Descripción
 

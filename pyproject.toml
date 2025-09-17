@@ -34,6 +34,12 @@ dependencies = [
     "crudadmin>=0.4.2",
     "markdown>=3.9",
     "fastapi-tailwind>=2.0.4a1",
+    "meilisearch-python-sdk>=4.9.0",
+    "playwright>=1.55.0",
+    "typer>=0.17.4",
+    "dateparser>=1.2.2",
+    "pymupdf4llm>=0.0.27",
+    "requests>=2.32.5",
 ]
 
 [project.optional-dependencies]
