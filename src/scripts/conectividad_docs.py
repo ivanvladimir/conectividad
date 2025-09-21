@@ -55,7 +55,6 @@ def crawl_sentencias_(main_url: str, update: bool = False):
             if not m:
                 print(i, "Error",full_text.strip())
             document_id=int(m.group('serie').rsplit(' ',1)[-1])
-            data['id']=i
             data['document_id']=document_id
             data['links']={}
             data.update(m.groupdict())
@@ -119,15 +118,16 @@ def download_file(url,odir,simulate=False):
                     f.write(chunk)
     return os.path.join(odir,local_filename)
 
-re_pages=re.compile(r'\n\n(\d+)\n\n')
-re_sections=re.compile(r'\*\*([IVXLC]+)\*\*')
-re_por_tanto=re.compile(r'\*\*Por tanto,\*\*')
+re_pages=re.compile(r'\s*\n\n(\d+)\n\n\s*',re.MULTILINE)
+re_sections=re.compile(r'\s*\*\*([IVXLC]+)\.?\*\*\s*|\n([IVXLC]+)\.?\n', re.MULTILINE)
+re_por_tanto=re.compile(r'(\s*\*\*Por tanto,\*\*\s*|POR TANTO,\*\*\s*|\s*Por tanto,\s*|\s*Por lo tanto,\s*|\*\*POR TANTO:\*\*|Por las razones expuestas,|\*\*VOTO PARCIALMENTE DISIDENTE DEL\*\*)', re.MULTILINE)
+re_num_parr=re.compile(r'\n\n(\d+)\.\s*|^(\d+)\.\s*', re.MULTILINE)
 
 def segment_pages(markdown_text:str):
     # Find all page markers
     page_matches = list(re_pages.finditer(markdown_text))
     
-    pages_limits=[]
+    pages_limits=[0]
     
     if not page_matches:
         # No page markers found, return entire content as page 1
@@ -160,24 +160,37 @@ def segment_sections(markdown_text:str):
     # Find all page markers
     bits=list(re_por_tanto.finditer(markdown_text))
     sections = []
-    conclusion_section=(bits[0].start(),len(markdown_text))
-    markdown_text=markdown_text[:conclusion_section[0]]
+    conclusion_section=(bits[-1].start(),len(markdown_text))
+    markdown_text=markdown_text[:bits[-1].start()]
+    # where first section is in "**I**" or \n1.
+    m1=re.search(r"\*\*I\.?\*\*|\nI\n", markdown_text)
+    m2=re.search(r"\n\n1\.", markdown_text)
+
     section_matches = list(re_sections.finditer(markdown_text))
- 
     
     if not section_matches:
         # No page markers found, return entire content as page 1
         sections = [('',0,len(markdown_text))]
         return sections
-    
+   
     # Content before first page marker
-    start_content = section_matches[0].start()
-    if start_content:
+    if not m1 or m2.start() < m1.start():
+        #-------- 1.m2 ------ **1**m1 
+        start_content = m2.start()
         sections.append(('preambule',0,start_content))  # Page 0 for content before first page number
-    
+        if m1:
+            sections.append(('extra',m2.end(),m1.start()))  # Page 0 for content before first page number
+    else:
+        #-------- **1**m1 -------1.m2 
+        start_content = m1.start()
+        sections.append(('preambule',0,start_content))  # Page 0 for content before first page number
+        
     # Process each page
     for i, match in enumerate(section_matches):
         section_num = match.group(1)
+        if section_num is None:
+            section_num = match.group(2)
+
         
         # Start position after the page marker
         content_start = match.end()
@@ -193,27 +206,118 @@ def segment_sections(markdown_text:str):
     sections.append(('conclusion',conclusion_section[0],conclusion_section[1]))
     return sections
 
+def find_pages(loc_ini, loc_fin, page_limits):
+    """Compact version using list comprehension"""
+    pages=set()
+    for i,(ini,fin) in enumerate(zip(page_limits,page_limits[1:])):
+        if ini<=loc_ini<=fin:
+            pages.add(i)
+        if ini<=loc_fin<=fin:
+            pages.add(i)
+        if ini>=loc_ini and fin<=loc_fin:
+            pages.add(i)
+    return sorted(list(pages))
 
-def extract_first_section(markdown_text:str,page_limits):
-    documents=[]
-    print(markdown_text)
-    return documents
+def extract_first_section(markdown_text:str,page_limits, docid:int):
+    documents=[
+        {'text':markdown_text,
+         'type':'section',
+         'order':0,
+         'section':'preamble',
+         'document_id':docid,
+         'pages':find_pages(0,len(markdown_text),page_limits),
+         'ini':0,
+         'fin':len(markdown_text)
+         }
+        ]
+    labels=[]
+    return documents, labels
 
-def extract_elements(md:str):
+def extract_last_section(documents,ini:int, fin:int, markdown_text:str,page_limits, docid:int):
+    documents.append(
+        {'text':markdown_text[ini:fin],
+         'type':'section',
+         'order':len(documents)+1,
+         'section':'last',
+         'document_id':docid,
+         'pages':find_pages(ini,fin,page_limits),
+         'ini':ini,
+         'fin':fin
+         }
+    )
+    labels=[]
+    return documents, labels
+
+def extract_elements(md:str,docid:int):
     documents=[]
     page_limits=segment_pages(md)
     sections=segment_sections(md)
 
-    print(page_limits)
-    print(sections)
-    
-    elements=extract_first_section(md[sections[0][1]:sections[0][2]],page_limits)
-    print(elements)
+    documents,tags=extract_first_section(md[sections[0][1]:sections[0][2]],page_limits,docid)
 
+    for section_num,ini,fin in sections[1:-1]:
+        documents.append({
+            'text': section_num,
+            'type':'section',
+            'order':len(documents)+1,
+            'section':section_num,
+            'document_id':docid,
+            'pages':find_pages(ini,fin,page_limits),
+            'ini':ini-len(section_num), 'fin':ini})
+
+        segment=md[ini:fin]
+        parr_matches = list(re_num_parr.finditer(segment))
+        if len(parr_matches)==0:
+            documents.append(
+                {'text':segment,
+                 'type':'empty',
+                 'order':len(documents)+1,
+                 'section':section_num,
+                 #'parr_num':parr_num,
+                 'document_id':docid,
+                 'pages':find_pages(ini,fin,page_limits),
+                 'ini':ini, 'fin':ini+len(segment)})
+        else:
+            content_start = parr_matches[0].start()
+            if content_start:
+                documents.append(
+                    {'text':segment[0:content_start],
+                    'type':'parr',
+                    'order':len(documents)+1,
+                    'section':section_num,
+                    #'parr_num':parr_num,
+                    'document_id':docid,
+                    'pages':find_pages(0,content_start,page_limits),
+                    'ini':ini+0, 'fin':ini+content_start})
+
+            # Process each page
+            for i, match in enumerate(parr_matches):
+                parr_num = match.group(1)
+                
+                # Start position after the page marker
+                content_start = match.end()
+                
+                # End position (start of next page marker or end of document)
+                if i < len(parr_matches) - 1:
+                    content_end = parr_matches[i + 1].start()
+                else:
+                    content_end = len(segment)
+            
+                documents.append(
+                    {'text':segment[content_start:content_end],
+                    'type':'parr',
+                    'order':len(documents)+1,
+                    'section':section_num,
+                    'parr_num':parr_num,
+                    'document_id':docid,
+                    'pages':find_pages(ini+content_start,ini+content_end,page_limits),
+                    'ini':ini+content_start, 'fin':ini+content_end})
+
+    documents,tags=extract_last_section(documents, sections[-1][1], sections[-1][2],md, page_limits,docid)
     return documents
     
 
-async def extract_sentencias_():
+async def extract_sentencias_(ini, update):
     load_dotenv()
     async with AsyncClient('http://localhost:7700', os.getenv("MEILI_MASTER_KEY")) as client:
         index = client.index("conectividad_docs")
@@ -225,21 +329,25 @@ async def extract_sentencias_():
 
         documents=[]
         for doc in track(docs.results):
+            if ini and doc['document_id']<ini:
+                continue
             file_path=download_file(doc['links']['pdf'],'/tmp',simulate=False)
             original = pymupdf4llm.to_markdown(file_path)
+            with open(f'/tmp/{doc["document_id"]}.md','w') as f:
+                f.write(original)
+            print(f'/tmp/{doc["document_id"]}.md')
             data={}
             data={'document_id':doc['document_id'],
                   'text':original,
                   'type':'original'}
             documents.append(data)
-            documents_=extract_elements(original)
-            #print(original)
-            break
+            documents_=extract_elements(original,doc['document_id'])
+            print(documents_)
         
     return None
 
 @app.command()
-def extract_sentencias(update: bool = False):
+def extract_sentencias(ini: int = None, update: bool = False):
     """Extract sentencias, create records in database
 
     Parameters:
@@ -248,7 +356,7 @@ def extract_sentencias(update: bool = False):
 
     None"""
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(extract_sentencias_())
+    loop.run_until_complete(extract_sentencias_(ini, update))
 
 
 

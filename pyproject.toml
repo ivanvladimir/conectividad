@@ -40,6 +40,7 @@ dependencies = [
     "dateparser>=1.2.2",
     "pymupdf4llm>=0.0.27",
     "requests>=2.32.5",
+    "rich>=13.9.4",
 ]
 
 [project.optional-dependencies]
