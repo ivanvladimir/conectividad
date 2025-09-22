@@ -120,7 +120,7 @@ def download_file(url,odir,simulate=False):
 
 re_pages=re.compile(r'\s*\n\n(\d+)\n\n\s*',re.MULTILINE)
 re_sections=re.compile(r'\s*\*\*([IVXLC]+)\.?\*\*\s*|\n([IVXLC]+)\.?\n', re.MULTILINE)
-re_por_tanto=re.compile(r'(\s*\*\*Por tanto,\*\*\s*|POR TANTO,\*\*\s*|\s*Por tanto,\s*|\s*Por lo tanto,\s*|\*\*POR TANTO:\*\*|Por las razones expuestas,|\*\*VOTO PARCIALMENTE DISIDENTE DEL\*\*)', re.MULTILINE)
+re_por_tanto=re.compile(r'(\s*\*\*Por tanto,\*\*\s*|POR TANTO,\*\*\s*|\s*Por tanto,\s*|\s*Por lo tanto,\s*|\*\*POR TANTO:?\*\*|Por las razones expuestas,|\*\*VOTO PARCIALMENTE DISIDENTE DEL\*\*)', re.MULTILINE)
 re_num_parr=re.compile(r'\n\n(\d+)\.\s*|^(\d+)\.\s*', re.MULTILINE)
 
 def segment_pages(markdown_text:str):
@@ -230,8 +230,7 @@ def extract_first_section(markdown_text:str,page_limits, docid:int):
          'fin':len(markdown_text)
          }
         ]
-    labels=[]
-    return documents, labels
+    return documents
 
 def extract_last_section(documents,ini:int, fin:int, markdown_text:str,page_limits, docid:int):
     documents.append(
@@ -245,15 +244,14 @@ def extract_last_section(documents,ini:int, fin:int, markdown_text:str,page_limi
          'fin':fin
          }
     )
-    labels=[]
-    return documents, labels
+    return documents
 
 def extract_elements(md:str,docid:int):
     documents=[]
     page_limits=segment_pages(md)
     sections=segment_sections(md)
 
-    documents,tags=extract_first_section(md[sections[0][1]:sections[0][2]],page_limits,docid)
+    documents=extract_first_section(md[sections[0][1]:sections[0][2]],page_limits,docid)
 
     for section_num,ini,fin in sections[1:-1]:
         documents.append({
@@ -313,7 +311,7 @@ def extract_elements(md:str,docid:int):
                     'pages':find_pages(ini+content_start,ini+content_end,page_limits),
                     'ini':ini+content_start, 'fin':ini+content_end})
 
-    documents,tags=extract_last_section(documents, sections[-1][1], sections[-1][2],md, page_limits,docid)
+    documents=extract_last_section(documents, sections[-1][1], sections[-1][2],md, page_limits,docid)
     return documents
     
 
@@ -327,10 +325,10 @@ async def extract_sentencias_(ini, update):
             sort=["document_id:asc"],
             limit=3000)
 
-        documents=[]
         for doc in track(docs.results):
             if ini and doc['document_id']<ini:
                 continue
+            documents=[]
             file_path=download_file(doc['links']['pdf'],'/tmp',simulate=False)
             original = pymupdf4llm.to_markdown(file_path)
             with open(f'/tmp/{doc["document_id"]}.md','w') as f:
@@ -342,7 +340,9 @@ async def extract_sentencias_(ini, update):
                   'type':'original'}
             documents.append(data)
             documents_=extract_elements(original,doc['document_id'])
-            print(documents_)
+            documents.extend(documents_)
+
+            await index.add_documents(documents)
         
     return None
 
