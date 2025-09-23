@@ -35,4 +35,17 @@ async def main(request: Request) -> HTMLResponse:
     else:
         raise HTTPException(status_code=404, detail="Page not found")
 
+@router.get("/search")
+async def search(request: Request) -> HTMLResponse:
+    """
+    Main user page
+    """
+    start_time = time.time()
+    response = templates.TemplateResponse(
+        request=request,
+        name="user/search.html",
+        context={"elapsed_time_seconds": f"{time.time() - start_time:2.3f}",
+                 "active_page":'search'},
+    )
+    return response
 

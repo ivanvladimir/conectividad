@@ -3,10 +3,12 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request, Response
 from fastapi.security import OAuth2PasswordRequestForm
+from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.config import settings
 from ...core.db.database import async_get_db
+from ...api.dependencies import get_current_superuser, get_current_user
 from ...core.exceptions.http_exceptions import UnauthorizedException
 from ...core.schemas import Token
 from ...core.security import (
@@ -18,8 +20,9 @@ from ...core.security import (
     verify_token,
 )
 
-router = APIRouter(tags=["login"])
+from ...crud.crud_users import crud_users
 
+router = APIRouter(tags=["login"])
 
 @router.post("/login", response_model=Token)
 async def login_for_access_token(
@@ -44,7 +47,20 @@ async def login_for_access_token(
     return {"access_token": access_token, "token_type": "bearer"}
 
 
-@router.post("/refresh")
+@router.post("/check_auth_status")
+async def check_auth_status(
+    request: Request,
+    current_user: Annotated[dict, Depends(get_current_user)]
+) -> dict[str, str]:
+    if not current_user:
+        raise ForbiddenException()
+
+    return JSONResponse(content={"authenticated": 'true', 
+                                 "current_user": {'name':current_user['name'], 'username':current_user['username'], 'is_superuser':current_user['is_superuser'], 'email':current_user['email'], 'id':current_user['id']
+                                                  }
+                                 })
+
+@router.post("/refresh", response_model=Token)
 async def refresh_access_token(request: Request, db: AsyncSession = Depends(async_get_db)) -> dict[str, str]:
     refresh_token = request.cookies.get("refresh_token")
     if not refresh_token:

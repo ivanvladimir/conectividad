@@ -17,12 +17,16 @@
 // Define URLs globally before loading external JS files
 window.APP_CONFIG = {
   urls: {
-      verify: " url_for('verify') ",
-      refresh: " url_for('refresh_access_token') ",
-      logout: " url_for('logout') ",
+      verify: "{{ url_for('check_auth_status') }}",
+      refresh: "{{ url_for('refresh_access_token') }}",
+      logout: "{{ url_for('logout') }}",
   },
   baseUrl: "{{ url_for('main') }}",
+};
 </script>
+
+
+<div x-data="authApp()" x-init="checkAuthStatus()">
 
 <!-- Navbar that hides on small screens (hidden sm:flex) -->
 <div class="navbar bg-base-100 shadow-lg hidden sm:flex">
@@ -39,7 +43,15 @@ window.APP_CONFIG = {
         </ul>
     </div>
     <div class="navbar-end">
-        <a class="btn btn-primary">Login</a>
+        <button 
+          x-bind:disabled="isLoggedIn ? false : true"
+          class="btn btn-secondary"
+          hx-post="{{url_for('logout')}}"
+          hx-trigger="click"
+          @htmx:after-request="handleLogout($event)">
+            <span x-show="!loading">Logout</span>
+            <span x-show="loading">Logging out...</span>
+        </button>
     </div>
 </div>
 
@@ -78,17 +90,286 @@ window.APP_CONFIG = {
     </div>
 </div>
 
- <!-- Demo content to show navbar behavior -->
-<div class="container mx-auto p-8">
-              {% block content %}
+<!-- Main App Container -->
+    <h1>User Authentication Demo</h1>
+    
+    <!-- Authentication Status Display -->
+    <div class="auth-section">
+        <h2>Authentication Status</h2>
+        <template x-if="isLoggedIn">
+            <div class="user-info">
+                <p><strong>✅ Logged in as:</strong></p>
+                <button class="btn btn-secondary" 
+                        hx-post="{{url_for('logout')}}" 
+                        hx-trigger="click"
+                        @htmx:before-request="loading = true"
+                        @htmx:after-request="handleLogout($event)"
+                    <span x-show="!loading">Logout</span>
+                    <span x-show="loading">Logging out...</span>
+                </button>
+            </div>
+        </template>
+        
+        <template x-if="!isLoggedIn">
+            <div>
+                <p><strong>❌ Not logged in</strong></p>
+                <p>Please log in to access restricted content.</p>
+            </div>
+        </template>
+    </div>
 
-              {% endblock %}
+<!-- Login Form (shown only when not logged in) -->
+<div x-show="!isLoggedIn" class="card bg-base-100 shadow-xl mb-8">
+  <div class="card-body">
+      <h2 class="card-title">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path>
+          </svg>
+          Ingresar a cuenta
+      </h2>
+      
+      <form hx-post="{{url_for('login_for_access_token')}}" 
+        hx-trigger="submit"
+        @htmx:before-request="loading = true"
+        @htmx:after-request="handleLogin($event)"
+        class="space-y-4">
+          
+          <div class="form-control">
+              <label class="label">
+                  <span class="label-text font-semibold">Usuario</span>
+              </label>
+              <input type="text" 
+                      name="username" 
+                      placeholder="Enter your username"
+                      class="input input-bordered w-full" 
+                      x-model="loginForm.username"
+                      required />
+          </div>
+          
+          <div class="form-control">
+              <label class="label">
+                  <span class="label-text font-semibold">Password</span>
+              </label>
+              <input type="password" 
+                      name="password" 
+                      placeholder="Enter your password"
+                      class="input input-bordered w-full" 
+                      x-model="loginForm.password"
+                      required />
+          </div>
+          
+          <div x-show="loginError" class="alert alert-error" x-transition>
+              <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+              </svg>
+              <span x-text="loginError"></span>
+          </div>
+          
+          <div class="form-control mt-6">
+              <button type="submit" 
+                      class="btn btn-primary" 
+                      :class="{ 'loading': loading }" 
+                      :disabled="loading">
+                  <span x-show="!loading">Login</span>
+                  <span x-show="loading" class="loading loading-spinner loading-sm"></span>
+              </button>
+          </div>
+      </form>
+  </div>
 </div>
+
+<!-- Restricted Section (shown only when logged in) -->
+<div x-show="isLoggedIn" class="restricted-section">
+              
+{% block content %}{% endblock %}
+
+        <h2>🔒 Restricted Content</h2>
+        <p>This content is only visible to authenticated users!</p>
+        
+        <!-- Dynamic content loaded via HTMX -->
+        <div id="restricted-content" 
+              hx-post="/api/restricted-data"
+              hx-trigger="load delay:500ms"
+              hx-headers=`{"Authorization": "Bearer ${localStorage.access_token}"}`
+              hx-on:htmx:before-request="if (!isLoggedIn) event.preventDefault()">
+            <p>Loading restricted content...</p>
+        </div>
+        
+        <!-- Admin-only section -->
+        <template x-if="isAdmin">
+            <div style="background: #fff3cd; padding: 15px; margin-top: 15px; border-radius: 4px;">
+                <h3>👑 Admin Panel</h3>
+                <p>This is only visible to administrators.</p>
+                <button hx-get="/api/admin/users" 
+                        hx-target="#admin-data"
+                        hx-headers=`{"Authorization": "Bearer ${localStorage.access_token}"}`
+                >
+                    Load User Management
+                </button>
+                <div id="admin-data"></div>
+            </div>
+        </template>
+    </div>
+</div>
+
 
 {% include "footer.html" %}
 
 <script src="https://unpkg.com/htmx.org@2.0.4" crossorigin="anonymous"></script>
-<script src="{{ url_for('static', path='conectividad.js') }}"></script>
+<script>
+function authApp() {
+    return {
+        isLoggedIn: false,
+        currentUser: undefined,
+        loading: false,
+        loginError: '',
+        error: '',
+        accessToken: '',
+        loginForm: {
+            username: '',
+            password: ''
+        },
+
+        isAdmin() {
+          if(this.currentUser === undefined){
+            return false;
+          }else{
+            return this.currentUser.is_superuser;
+          }
+        },
+
+        async checkAuthStatus() {
+          const accessToken = localStorage.getItem('access_token');
+          data = await verifyToken(accessToken);
+          if (data.authenticated ) {
+            this.isLoggedIn = true;
+            this.currentUser = data.current_user;
+            this.isAdmin = this.currentUser.is_superuser;
+          } else {
+            this.isLoggedIn = false;
+            this.currentUser = {};
+          }
+    },
+
+        handleLogin(event) {
+          this.loading = false;
+          const response = event.detail.xhr;
+          
+          if (response.status === 200) {
+            const data = JSON.parse(response.responseText);
+            if (data.access_token) {
+              localStorage.setItem('access_token',data.access_token);
+              this.isLoggedIn = true;
+              this.currentUser = data.user;
+              this.loginError = '';
+              this.loginForm = { username: '', password: '' };
+                  
+              // Trigger reload of restricted content
+              htmx.trigger('#restricted-cont', 'load');
+            } else {
+                this.loginError = data.message || 'Login failed';
+            }
+          } else {
+              this.loginError = 'Login failed. Please try again.';
+          }
+        },
+
+        handleLogout(event) {
+          this.loading = false;
+          const response = event.detail.xhr;
+          console.log(response);
+            
+          if (response.status === 200) {
+            this.isLoggedIn = false;
+            this.currentUser = undefined;
+            this.loginError = '';
+          }
+        }
+    }
+}
+
+async function verifyToken(token) {
+  try {
+    const response = await fetch(APP_CONFIG.urls['verify'], {
+      method: 'POST',
+      headers: { 
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json' 
+      },
+      credentials: 'include'
+    });
+    if (!response.ok) {
+      return {'authenticated': false };
+    } else {
+      const jsonData = await response.json();
+      return jsonData;
+    }
+  } catch (error) {
+    console.error('Error fetching data:', error);
+  }
+}
+
+
+// Function to refresh access token
+async function refreshAccessToken() {
+  try {
+    const response = await fetch(window.app.urls['refresh'], {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+            credentials: 'include'
+      });
+        
+    if (response.ok) {
+      const data = await response.json();
+      localStorage.access_token = data.access_token;
+      localStorage.accessTokenExpiry = new Date().getTime() + (data.expiresIn * 1000);
+      return true;
+    } else {
+      return false;
+    }
+    } catch (error) {
+      console.error('Error refreshing token:', error);
+      return false;
+    }
+}
+
+// Global HTMX configuration
+document.addEventListener('DOMContentLoaded', function() {
+    // Add authentication headers to all HTMX requests
+    document.body.addEventListener('htmx:configRequest', function(event) {
+      const token = localStorage.access_token;
+      if (token) {
+        event.detail.headers['Authorization'] = 'Bearer ' + token;
+      }
+    });
+
+    // Handle authentication errors globally
+    document.body.addEventListener('htmx:responseError', function(event) {
+      if (event.detail.xhr.status === 401) {
+        // Stop the current request
+        event.stopPropagation();
+        
+        // Attempt to refresh the token
+        refreshAccessToken().then(success => {
+          if (success) {
+            // Retry the original request
+            const originalRequest = event.detail.requestConfig;
+            htmx.ajax('POST', originalRequest.path, {
+              target: originalRequest.target,
+              swap: originalRequest.swap
+            });
+          } else {
+            // If refresh fails, redirect to login
+            logout();
+          }
+        });
+      }
+    });
+});
+</script>
+
 
 {% block script %}{% endblock %}
 
