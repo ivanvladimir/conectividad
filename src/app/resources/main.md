@@ -1,5 +1,5 @@
 ---
-title: Conectividad
+title: Principal
 ---
 
 # Conectividad

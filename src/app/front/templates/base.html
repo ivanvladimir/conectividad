@@ -3,11 +3,11 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>{% block title %}{% endblock %} - Conectividad </title>
+  <title>{% block title %}{% endblock %} 🕸️ Conectividad </title>
 
   <link rel="stylesheet" href="{{ url_for('static', path='output.css') }}" />
-  <script defer src="https://friconix.com/cdn/friconix.js"> </script> 
-  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
+  <script defer src="https://friconix.com/cdn/friconix.js"> </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.15.0/dist/cdn.min.js"></script>
 
   {% block extra_links %}{% endblock %}
 </head>
@@ -48,6 +48,7 @@ window.APP_CONFIG = {
           class="btn btn-secondary"
           hx-post="{{url_for('logout')}}"
           hx-trigger="click"
+          hx-swap="none"
           @htmx:after-request="handleLogout($event)">
             <span x-show="!loading">Logout</span>
             <span x-show="loading">Logging out...</span>
@@ -89,34 +90,6 @@ window.APP_CONFIG = {
         </button>
     </div>
 </div>
-
-<!-- Main App Container -->
-    <h1>User Authentication Demo</h1>
-    
-    <!-- Authentication Status Display -->
-    <div class="auth-section">
-        <h2>Authentication Status</h2>
-        <template x-if="isLoggedIn">
-            <div class="user-info">
-                <p><strong>✅ Logged in as:</strong></p>
-                <button class="btn btn-secondary" 
-                        hx-post="{{url_for('logout')}}" 
-                        hx-trigger="click"
-                        @htmx:before-request="loading = true"
-                        @htmx:after-request="handleLogout($event)"
-                    <span x-show="!loading">Logout</span>
-                    <span x-show="loading">Logging out...</span>
-                </button>
-            </div>
-        </template>
-        
-        <template x-if="!isLoggedIn">
-            <div>
-                <p><strong>❌ Not logged in</strong></p>
-                <p>Please log in to access restricted content.</p>
-            </div>
-        </template>
-    </div>
 
 <!-- Login Form (shown only when not logged in) -->
 <div x-show="!isLoggedIn" class="card bg-base-100 shadow-xl mb-8">
@@ -181,41 +154,29 @@ window.APP_CONFIG = {
 <!-- Restricted Section (shown only when logged in) -->
 <div x-show="isLoggedIn" class="restricted-section">
               
-{% block content %}{% endblock %}
-
-        <h2>🔒 Restricted Content</h2>
-        <p>This content is only visible to authenticated users!</p>
-        
-        <!-- Dynamic content loaded via HTMX -->
-        <div id="restricted-content" 
-              hx-post="/api/restricted-data"
-              hx-trigger="load delay:500ms"
-              hx-headers=`{"Authorization": "Bearer ${localStorage.access_token}"}`
-              hx-on:htmx:before-request="if (!isLoggedIn) event.preventDefault()">
-            <p>Loading restricted content...</p>
-        </div>
-        
-        <!-- Admin-only section -->
-        <template x-if="isAdmin">
-            <div style="background: #fff3cd; padding: 15px; margin-top: 15px; border-radius: 4px;">
-                <h3>👑 Admin Panel</h3>
-                <p>This is only visible to administrators.</p>
-                <button hx-get="/api/admin/users" 
-                        hx-target="#admin-data"
-                        hx-headers=`{"Authorization": "Bearer ${localStorage.access_token}"}`
-                >
-                    Load User Management
-                </button>
-                <div id="admin-data"></div>
-            </div>
-        </template>
-    </div>
+<!-- Dynamic content loaded via HTMX -->
+<div class="container mx-auto p-6 space-y-8">
+<section class="content-section">
+<div class="card bg-base-100 shadow-xl prose">
+<div class="container mx-auto p-6 space-y-8">
+{% block restricted_content %}
+{% endblock %}
+</div>
+</div>
+</section>
 </div>
 
+<!-- Admin-only section -->
+<template x-if="isAdmin">
+{% block admin_content %}{% endblock %}
+</template>
+
+</div>
+</div>
 
 {% include "footer.html" %}
 
-<script src="https://unpkg.com/htmx.org@2.0.4" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.7/dist/htmx.min.js" integrity="sha384-ZBXiYtYQ6hJ2Y0ZNoYuI+Nq5MqWBr+chMrS/RkXpNzQCApHEhOt2aY8EJgqwHLkJ" crossorigin="anonymous"></script>
 <script>
 function authApp() {
     return {

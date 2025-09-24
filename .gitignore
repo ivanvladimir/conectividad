@@ -142,3 +142,5 @@ src/.env
 crudadmin_data/
 *.db-journal
 *.sqlite3-journal
+
+src/app/resources/output.*
