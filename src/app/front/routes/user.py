@@ -49,3 +49,31 @@ async def search(request: Request) -> HTMLResponse:
     )
     return response
 
+@router.get("/documents")
+async def docs(request: Request) -> HTMLResponse:
+    """
+    Main user page
+    """
+    start_time = time.time()
+    response = templates.TemplateResponse(
+        request=request,
+        name="user/search.html",
+        context={"elapsed_time_seconds": f"{time.time() - start_time:2.3f}",
+                 "active_page":'search'},
+    )
+    return response
+
+@router.get("/graphs")
+async def graphs(request: Request) -> HTMLResponse:
+    """
+    Main user page
+    """
+    start_time = time.time()
+    response = templates.TemplateResponse(
+        request=request,
+        name="user/search.html",
+        context={"elapsed_time_seconds": f"{time.time() - start_time:2.3f}",
+                 "active_page":'search'},
+    )
+    return response
+

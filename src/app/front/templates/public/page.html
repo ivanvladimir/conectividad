@@ -3,5 +3,7 @@
 {% block title %}{{metadata.title[0] | string }}{% endblock %}
 
 {% block restricted_content %}
+<div class="prose">
 {{content | safe}}
+</div>
 {% endblock %}

@@ -28,7 +28,7 @@ class CryptSettings(BaseSettings):
 
 
 class DatabaseSettings(BaseSettings):
-    pass
+    MEILI_MASTER_KEY: str = config("MEILI_MASTER_KEY", default="")
 
 
 class SQLiteSettings(DatabaseSettings):

@@ -33,11 +33,11 @@ window.APP_CONFIG = {
     <div class="navbar-start">
         <a class="btn btn-ghost text-xl">Conectividad</a>
         <ul class="menu menu-horizontal px-1">
-            {% for page,label in [('main','Principal'),('docs','Sentencias'),('search','Búsquedas'),('graphs','Grafos')] %}
+            {% for page,label in [('main','Principal'),('docs','Sentencias'),('search','Busqueda'),('graphs','Grafos')] %}
             {% if active_page == page %}
-            <li><a class="menu-active" href="#">
+            <li><a class="menu-active" href="{{url_for(page)}}">
             {% else %}
-            <li><a href="#">
+            <li><a href="{{url_for(page)}}">
             {% endif %}{{label}}</a></li>
             {% endfor %}
         </ul>
@@ -155,15 +155,9 @@ window.APP_CONFIG = {
 <div x-show="isLoggedIn" class="restricted-section">
               
 <!-- Dynamic content loaded via HTMX -->
-<div class="container mx-auto p-6 space-y-8">
-<section class="content-section">
-<div class="card bg-base-100 shadow-xl prose">
-<div class="container mx-auto p-6 space-y-8">
+<div class="container m-auto p-12">
 {% block restricted_content %}
 {% endblock %}
-</div>
-</div>
-</section>
 </div>
 
 <!-- Admin-only section -->
@@ -192,10 +186,10 @@ function authApp() {
         },
 
         isAdmin() {
-          if(this.currentUser === undefined){
-            return false;
+          if(this.currentUser && this.currentUser.is_superuser){
+            return true;
           }else{
-            return this.currentUser.is_superuser;
+            return false;
           }
         },
 
