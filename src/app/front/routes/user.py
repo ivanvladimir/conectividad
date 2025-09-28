@@ -57,11 +57,31 @@ async def docs(request: Request) -> HTMLResponse:
     start_time = time.time()
     response = templates.TemplateResponse(
         request=request,
-        name="user/search.html",
+        name="user/documents.html",
         context={"elapsed_time_seconds": f"{time.time() - start_time:2.3f}",
-                 "active_page":'search'},
+                 "active_page":'docs'},
     )
     return response
+
+@router.get("/document/{sentence_num}")
+async def doc(request: Request,
+    sentence_num: int = 1
+               ) -> HTMLResponse:
+    """
+    Main user page
+    """
+    start_time = time.time()
+
+    response = templates.TemplateResponse(
+        request=request,
+        name="user/document.html",
+        context={"elapsed_time_seconds": f"{time.time() - start_time:2.3f}",
+                 "sentence_num": sentence_num,
+                 "active_page":'docs'},
+    )
+    return response
+
+
 
 @router.get("/graphs")
 async def graphs(request: Request) -> HTMLResponse:

@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+
+{% block title %}Lista de sentencias{% endblock %}
+
+{% block restricted_content %}
+
+<div id="data-table" class="overflow-auto"
+  hx-trigger="load"
+  hx-post="{{url_for('api_docs')}}"
+  hx-target="#table-documents"
+  hx-indicator="#loading-indicator"
+  hx-swap="innerHTML">
+
+  <table class="table table-zebra w-full">
+    <thead>
+      <tr>
+        <th></th>
+        <th>Sentencia</th>
+        <th class="w-1/8">Serie</th>
+        <th class="w-1/6">Fecha</th>
+      </tr>
+    </thead>
+    <tbody id="table-documents">
+    </tbody>
+  </table>
+</div>
+
+{% endblock %}

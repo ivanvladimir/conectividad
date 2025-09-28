@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+
+{% block title %}Sentencia {{sentence_num}}{% endblock %}
+
+{% block restricted_content %}
+
+<div hx-post="{{url_for('api_doc',sentence_num=sentence_num)}}"
+      hx-trigger="load"
+      hx-swap="innerHTML">
+</div>
+
+
+
+{% endblock %}

@@ -11,6 +11,7 @@
 
   {% block extra_links %}{% endblock %}
 </head>
+
 <body>
 
 <script>
@@ -25,7 +26,8 @@ window.APP_CONFIG = {
 };
 </script>
 
-
+<div class="min-h-screen flex flex-col">
+<div class="flex-1 flex flex-col">
 <div x-data="authApp()" x-init="checkAuthStatus()">
 
 <!-- Navbar that hides on small screens (hidden sm:flex) -->
@@ -91,6 +93,7 @@ window.APP_CONFIG = {
     </div>
 </div>
 
+<main class="fex-1 p-4">
 <!-- Login Form (shown only when not logged in) -->
 <div x-show="!isLoggedIn" class="card bg-base-100 shadow-xl mb-8">
   <div class="card-body">
@@ -155,7 +158,7 @@ window.APP_CONFIG = {
 <div x-show="isLoggedIn" class="restricted-section">
               
 <!-- Dynamic content loaded via HTMX -->
-<div class="container m-auto p-12">
+<div class="container mx-auto px-4 py-8">
 {% block restricted_content %}
 {% endblock %}
 </div>
@@ -164,6 +167,9 @@ window.APP_CONFIG = {
 <template x-if="isAdmin">
 {% block admin_content %}{% endblock %}
 </template>
+
+</main>
+</div>
 
 </div>
 </div>
@@ -196,15 +202,23 @@ function authApp() {
         async checkAuthStatus() {
           const accessToken = localStorage.getItem('access_token');
           data = await verifyToken(accessToken);
+          console.log(data);
           if (data.authenticated ) {
             this.isLoggedIn = true;
             this.currentUser = data.current_user;
             this.isAdmin = this.currentUser.is_superuser;
           } else {
-            this.isLoggedIn = false;
-            this.currentUser = {};
+            console.log("Trying to refresh token...");
+            result = await refreshAccessToken();
+            console.log("Refresh result:", result);
+            if(result){
+              this.isLoggedIn = true;
+            }else{
+              this.isLoggedIn = false;
+              this.currentUser = {};
+            }
           }
-    },
+        },
 
         handleLogin(event) {
           this.loading = false;
@@ -268,7 +282,7 @@ async function verifyToken(token) {
 // Function to refresh access token
 async function refreshAccessToken() {
   try {
-    const response = await fetch(window.app.urls['refresh'], {
+    const response = await fetch(APP_CONFIG.urls['refresh'], {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -305,7 +319,7 @@ document.addEventListener('DOMContentLoaded', function() {
       if (event.detail.xhr.status === 401) {
         // Stop the current request
         event.stopPropagation();
-        
+    
         // Attempt to refresh the token
         refreshAccessToken().then(success => {
           if (success) {

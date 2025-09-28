@@ -1,0 +1,17 @@
+
+{% for r in results %}
+      {% if loop.last and not last_page %}
+      <tr hx-post="{{url_for('api_docs')}}?page={{page+1}}"
+          hx-trigger="revealed once"
+          hx-swap="beforeend">
+      </tr>
+      {% else %}
+      <tr>
+        <th><a href="{{url_for('doc',sentence_num=r['sentence_num'])}}">{{r['sentence_num']}}</a></th>
+      <td><a href="{{url_for('doc',sentence_num=r['sentence_num'])}}">{{r['caso']}} {{r['tipo']}}</a></td>
+      <td><a href="{{url_for('doc',sentence_num=r['sentence_num'])}}">{{r['serie']}}</a></td>
+      <td>{{r['fecha']}}</td>
+      </tr>
+      {% endif %}
+{% endfor %}
+

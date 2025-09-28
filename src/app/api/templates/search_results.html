@@ -1,0 +1,28 @@
+
+{% for r in results %}
+      {% if loop.last and not last_page %}
+      <li hx-post="{{url_for('api_search')}}?page={{page+1}}"
+          hx-trigger="revealed"
+          hx-include="[name='query']"
+          hx-swap="afterend"
+          class="list-row">
+      {% else %}
+      <li class="list-row">
+      {% endif %}
+      <span  class="text-left text-base">
+        {{r['prefix']}} <mark class="text-lg">{{r['hit']}}</mark> {{r['sufix']}}
+      </span>
+      <div class="list-col-wrap">
+  <div class="breadcrumbs text-sm">
+      <ul>
+    <li class="bg-base-300">Sentencia {{r['sentence_num']}}</li>
+    <li class="bg-base-300">Section {{r['section']}}</li>
+    {% if r['parr_num'] %}<li class="bg-base-300">Parr. {{r['parr_num']}}</li>{% endif %}
+    <li class="bg-base-300">Páginas {{", ".join(r['pages'])}}</li>
+      </ul>
+  </div>
+  </div>
+
+      </li>
+{% endfor %}
+

@@ -1,0 +1,24 @@
+
+{% extends 'base.html' %}
+
+{% block title %}Buscar sentencia{% endblock %}
+
+{% block restricted_content %}
+
+<div class="container w-full px-4 py-8">
+<input type="text" 
+      placeholder="Términos a buscar..."
+      class="input w-full h-12 px-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+      name="query"
+      aria-label="Búsqueda"
+      hx-post="{{url_for('api_search')}}"
+      hx-trigger="keyup[key=='Enter']"
+      hx-target="#search-results"
+      hx-include="[name='query']"
+      hx-indicator="#loading-indicator">
+</div>
+
+<ul class="list bg-base-100 rounded-box shadow-md retuls" id="search-results">
+</ul>
+
+{% endblock %}

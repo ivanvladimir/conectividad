@@ -29,10 +29,8 @@ async def get_info_sentencias_(documents,update):
     load_dotenv()
     async with AsyncClient('http://localhost:7700', os.getenv("MEILI_MASTER_KEY")) as client:
         index = client.index("conectividad_docs")
-        if update:
-            await index.update_documents(documents)
-        else:
-            await index.add_documents(documents)
+        print(documents)
+        await index.add_documents(documents)
     return None
 
 def crawl_sentencias_(main_url: str, update: bool = False):
@@ -54,8 +52,9 @@ def crawl_sentencias_(main_url: str, update: bool = False):
             m = re_title_sentencia.search(full_text)
             if not m:
                 print(i, "Error",full_text.strip())
-            document_id=int(m.group('serie').rsplit(' ',1)[-1])
-            data['document_id']=document_id
+            sentence_num=int(m.group('serie').rsplit(' ',1)[-1])
+            data['document_id']=sentence_num
+            data['sentence_num']=sentence_num
             data['links']={}
             data.update(m.groupdict())
             tr_elements = li.locator('tr').all()
@@ -224,7 +223,7 @@ def extract_first_section(markdown_text:str,page_limits, docid:int):
          'type':'section',
          'order':0,
          'section':'preamble',
-         'document_id':docid,
+         'sentence_num':docid,
          'pages':find_pages(0,len(markdown_text),page_limits),
          'ini':0,
          'fin':len(markdown_text)
@@ -238,7 +237,7 @@ def extract_last_section(documents,ini:int, fin:int, markdown_text:str,page_limi
          'type':'section',
          'order':len(documents)+1,
          'section':'last',
-         'document_id':docid,
+         'sentence_num':docid,
          'pages':find_pages(ini,fin,page_limits),
          'ini':ini,
          'fin':fin
@@ -259,7 +258,7 @@ def extract_elements(md:str,docid:int):
             'type':'section',
             'order':len(documents)+1,
             'section':section_num,
-            'document_id':docid,
+            'sentence_num':docid,
             'pages':find_pages(ini,fin,page_limits),
             'ini':ini-len(section_num), 'fin':ini})
 
@@ -272,7 +271,7 @@ def extract_elements(md:str,docid:int):
                  'order':len(documents)+1,
                  'section':section_num,
                  #'parr_num':parr_num,
-                 'document_id':docid,
+                 'sentence_num':docid,
                  'pages':find_pages(ini,fin,page_limits),
                  'ini':ini, 'fin':ini+len(segment)})
         else:
@@ -284,7 +283,7 @@ def extract_elements(md:str,docid:int):
                     'order':len(documents)+1,
                     'section':section_num,
                     #'parr_num':parr_num,
-                    'document_id':docid,
+                    'sentence_num':docid,
                     'pages':find_pages(0,content_start,page_limits),
                     'ini':ini+0, 'fin':ini+content_start})
 
@@ -307,7 +306,7 @@ def extract_elements(md:str,docid:int):
                     'order':len(documents)+1,
                     'section':section_num,
                     'parr_num':parr_num,
-                    'document_id':docid,
+                    'sentence_num':docid,
                     'pages':find_pages(ini+content_start,ini+content_end,page_limits),
                     'ini':ini+content_start, 'fin':ini+content_end})
 
@@ -315,39 +314,46 @@ def extract_elements(md:str,docid:int):
     return documents
     
 
-async def extract_sentencias_(ini, update):
+async def extract_sentencias_(ini, fin, update):
     load_dotenv()
     async with AsyncClient('http://localhost:7700', os.getenv("MEILI_MASTER_KEY")) as client:
         index = client.index("conectividad_docs")
 
         docs=await index.get_documents(
             filter="type = 'description'",
-            sort=["document_id:asc"],
+            sort=["sentence_num:asc"],
             limit=3000)
 
+
         for doc in track(docs.results):
-            if ini and doc['document_id']<ini:
+            print(doc['sentence_num'])
+            if ini and doc['sentence_num']<ini:
                 continue
+            if fin and doc['sentence_num']>fin:
+                break
             documents=[]
             file_path=download_file(doc['links']['pdf'],'/tmp',simulate=False)
             original = pymupdf4llm.to_markdown(file_path)
-            with open(f'/tmp/{doc["document_id"]}.md','w') as f:
+            with open(f'/tmp/{doc["sentence_num"]}.md','w') as f:
                 f.write(original)
-            print(f'/tmp/{doc["document_id"]}.md')
             data={}
-            data={'document_id':doc['document_id'],
+            data={'sentence_num':doc['sentence_num'],
                   'text':original,
                   'type':'original'}
             documents.append(data)
-            documents_=extract_elements(original,doc['document_id'])
+            documents_=extract_elements(original,doc['sentence_num'])
             documents.extend(documents_)
+
+            stats = await index.get_stats()
+            for i,doc in enumerate(documents):
+                doc['document_id']=stats.number_of_documents+i+1
 
             await index.add_documents(documents)
         
     return None
 
 @app.command()
-def extract_sentencias(ini: int = None, update: bool = False):
+def extract_sentencias(ini: int = None, fin: int = None, update: bool = False):
     """Extract sentencias, create records in database
 
     Parameters:
@@ -356,7 +362,7 @@ def extract_sentencias(ini: int = None, update: bool = False):
 
     None"""
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(extract_sentencias_(ini, update))
+    loop.run_until_complete(extract_sentencias_(ini, fin, update))
 
 
 
@@ -463,6 +469,34 @@ def show_info():
  
     loop = asyncio.get_event_loop()
     loop.run_until_complete(show_info_())
+
+async def delete_all_():
+    """ Delete all the documents
+
+    Parameters:
+
+    Returns:
+
+    None"""
+    load_dotenv()
+
+    async with AsyncClient('http://localhost:7700', os.getenv("MEILI_MASTER_KEY")) as client:
+        index = client.index("conectividad_docs")
+        task =  await index.delete_all_documents()
+
+
+@app.command()
+def delete_all():
+    """ Delete all the documents
+
+    Parameters:
+
+    Returns:
+
+    None"""
+ 
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(delete_all_())
 
 
 if __name__ == "__main__":
