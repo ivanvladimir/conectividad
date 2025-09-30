@@ -81,8 +81,6 @@ async def doc(request: Request,
     )
     return response
 
-
-
 @router.get("/graphs")
 async def graphs(request: Request) -> HTMLResponse:
     """

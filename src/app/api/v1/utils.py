@@ -13,6 +13,7 @@ from ...core.utils.cache import cache
 from ...crud.crud_users import crud_users
 from ...schemas.user import UserRead
 import re 
+import markdown
 
 re_emph = re.compile(r"(<em>.*?</em>)")
 
@@ -116,19 +117,27 @@ async def api_doc(
     sentence_num: int = 0,
 ) -> HTMLResponse:
 
+    md = markdown.Markdown(extensions=["meta", "tables"])
     async with searchdb as client:
         index = client.index("conectividad_docs")
-        doc = await index.get_documents(
+        doc_info = await index.get_documents(
             filter=f'type = "description" AND sentence_num = "{sentence_num}"',
             limit=1,
         )
 
+        doc = await index.get_documents(
+            filter=f'type = "original" AND sentence_num = {sentence_num}',
+            limit=1
+        )
+        doc = doc.results[0] if doc.results else {'text':""}
+        doc['text']=md.convert(doc['text'])
 
     response = templates.TemplateResponse(
         request=request,
         name="document_info.html",
         context={
-            "doc_info": doc.results[0] if doc.results else {}
+            "doc_info": doc_info.results[0] if doc_info.results else {},
+            "doc": doc,
         },
     )
     return response

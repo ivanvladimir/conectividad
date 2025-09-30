@@ -4,15 +4,23 @@
     <div class="stat-value text-primary">{{doc_info['sentence_num']}}</div>
   </div>
   <div class="stat">
-    <div class="stat-title">Caso</div>
-    <div class="stat-value text-primary">{{doc_info['caso']}}</div>
-  </div>
-  <div class="stat">
     <div class="stat-title">Links</div>
     <div class="stat-actions">
     <a class="stat-desc btn btn-soft btn-xs btn-error" href="{{doc_info['links']['pdf']}}" target="_blank">pdf</a>
     <a class="stat-desc btn btn-soft btn-xs btn-secondary" href="{{doc_info['links']['doc']}}" target="_blank">doc</a>
     </div>
   </div>
+</div>
+
+
+<div class="divider">Sentencia</div>
+<div class="prose max-w-none">
+<h1>{{doc_info['caso']}} {{doc_info['tipo']}}</h1>
+</div>
+<br/>
+<br/>
+
+<div class="prose max-w-none">
+  {{ doc['text'] | safe }}
 </div>
 

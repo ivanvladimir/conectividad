@@ -6197,6 +6197,9 @@
   .w-full {
     width: 100%;
   }
+  .max-w-none {
+    max-width: none;
+  }
   .flex-1 {
     flex: 1;
   }
