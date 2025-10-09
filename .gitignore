@@ -144,3 +144,5 @@ crudadmin_data/
 *.sqlite3-journal
 
 src/app/resources/output.*
+src/data/*.pdf
+src/data/*.md

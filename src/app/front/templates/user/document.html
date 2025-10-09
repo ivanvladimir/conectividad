@@ -1,6 +1,9 @@
 {% extends 'base.html' %}
 
 {% block title %}Sentencia {{sentence_num}}{% endblock %}
+{% block extra_links %} 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" type="module"></script>
+{% endblock %}
 
 {% block restricted_content %}
 
@@ -9,4 +12,124 @@
       hx-swap="innerHTML">
 </div>
 
+  <div class="container" x-data="pdfViewer()">
+        <h1>PDF.js Viewer with Alpine.js</h1>
+        
+        <div x-show="error" class="error" x-text="error"></div>
+        
+        <div class="controls">
+            <input 
+                type="text" 
+                x-model="pdfUrl" 
+                placeholder="Enter PDF URL"
+                style="flex: 1; min-width: 300px;"
+            >
+            <button @click="loadPDF">Load PDF</button>
+            
+            <div class="page-info" x-show="numPages > 0">
+                <button @click="prevPage" :disabled="pageNum <= 1">Previous</button>
+                <span>Page <input type="number" x-model.number="pageNum" @change="renderPage" min="1" :max="numPages" style="width: 60px;"> of <span x-text="numPages"></span></span>
+                <button @click="nextPage" :disabled="pageNum >= numPages">Next</button>
+            </div>
+            
+            <div>
+                <label>Scale: </label>
+                <input type="range" x-model.number="scale" @input="renderPage" min="0.5" max="3" step="0.1" style="width: 100px;">
+                <span x-text="Math.round(scale * 100) + '%'"></span>
+            </div>
+        </div>
+        
+        <div class="canvas-container">
+            <canvas id="pdfCanvas"></canvas>
+        </div>
+    </div>
+
+{% endblock %}
+
+{% block script %}
+<script>
+        // Set the workerSrc for PDF.js
+
+        function pdfViewer() {
+            return {
+                pdfUrl: 'https://www.corteidh.or.cr/docs/casos/articulos/seriec_12_esp.pdf',
+                pdfDoc: null,
+                pageNum: 1,
+                numPages: 0,
+                scale: 1.5,
+                error: '',
+                
+                init() {
+                  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+                    // Optionally load a default PDF on initialization
+                  //this.loadPDF();
+                },
+                
+                async loadPDF() {
+                    this.error = '';
+                    
+                    if (!this.pdfUrl) {
+                        this.error = 'Please enter a PDF URL';
+                        return;
+                    }
+                    
+                    try {
+                        // Load the PDF document
+                        const loadingTask = pdfjsLib.getDocument(this.pdfUrl);
+                        this.pdfDoc = await loadingTask.promise;
+                        this.numPages = this.pdfDoc.numPages;
+                        this.pageNum = 1;
+                        
+                        // Render the first page
+                        await this.renderPage();
+                    } catch (err) {
+                        this.error = 'Error loading PDF: ' + err.message;
+                        console.error(err);
+                    }
+                },
+                
+                async renderPage() {
+                    if (!this.pdfDoc) return;
+                    
+                    try {
+                        // Get the page
+                        const page = await this.pdfDoc.getPage(this.pageNum);
+                        
+                        const canvas = document.getElementById('pdfCanvas');
+                        const context = canvas.getContext('2d');
+                        
+                        // Calculate viewport
+                        const viewport = page.getViewport({ scale: this.scale });
+                        
+                        // Set canvas dimensions
+                        canvas.height = viewport.height;
+                        canvas.width = viewport.width;
+                        
+                        // Render PDF page
+                        const renderContext = {
+                            canvasContext: context,
+                            viewport: viewport
+                        };
+                        
+                        await page.render(renderContext).promise;
+                    } catch (err) {
+                        this.error = 'Error rendering page: ' + err.message;
+                        console.error(err);
+                    }
+                },
+                
+                async nextPage() {
+                    if (this.pageNum >= this.numPages) return;
+                    this.pageNum++;
+                    await this.renderPage();
+                },
+                
+                async prevPage() {
+                    if (this.pageNum <= 1) return;
+                    this.pageNum--;
+                    await this.renderPage();
+                }
+            }
+        }
+    </script>
 {% endblock %}

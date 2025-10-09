@@ -6,10 +6,10 @@
   <title>{% block title %}{% endblock %} 🕸️ Conectividad </title>
 
   <link rel="stylesheet" href="{{ url_for('static', path='output.css') }}" />
+  {% block extra_links %}{% endblock %}
   <script defer src="https://friconix.com/cdn/friconix.js"> </script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.15.0/dist/cdn.min.js"></script>
 
-  {% block extra_links %}{% endblock %}
 </head>
 
 <body>
@@ -164,11 +164,12 @@ window.APP_CONFIG = {
 </div>
 
 <!-- Admin-only section -->
-<template x-if="isAdmin">
+<template x-show="isAdmin">
 {% block admin_content %}{% endblock %}
 </template>
 
 </main>
+</div>
 </div>
 
 </div>
@@ -184,6 +185,7 @@ function authApp() {
         currentUser: undefined,
         loading: false,
         loginError: '',
+        isAdmin: false,
         error: '',
         accessToken: '',
         loginForm: {
@@ -191,7 +193,7 @@ function authApp() {
             password: ''
         },
 
-        isAdmin() {
+        isAdmin_() {
           if(this.currentUser && this.currentUser.is_superuser){
             return true;
           }else{
@@ -202,11 +204,10 @@ function authApp() {
         async checkAuthStatus() {
           const accessToken = localStorage.getItem('access_token');
           data = await verifyToken(accessToken);
-          console.log(data);
           if (data.authenticated ) {
             this.isLoggedIn = true;
             this.currentUser = data.current_user;
-            this.isAdmin = this.currentUser.is_superuser;
+            this.isAdmin = this.isAdmin_();
           } else {
             console.log("Trying to refresh token...");
             result = await refreshAccessToken();

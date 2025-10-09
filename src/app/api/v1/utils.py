@@ -36,7 +36,7 @@ async def api_search(
             index = client.index("conectividad_docs")
             data = await index.search(
                 query,
-                filter='type = "parr"',
+                filter='type = "element"',
                 page=page + 1,
                 limit=20,
                 attributes_to_highlight=["text"],
@@ -45,6 +45,8 @@ async def api_search(
             res = data
     else:
         res = {}
+
+
 
     results = [
         dict(d["_formatted"]) for d in res.hits
@@ -117,7 +119,7 @@ async def api_doc(
     sentence_num: int = 0,
 ) -> HTMLResponse:
 
-    md = markdown.Markdown(extensions=["meta", "tables"])
+    md = markdown.Markdown(extensions=['attr_list'])
     async with searchdb as client:
         index = client.index("conectividad_docs")
         doc_info = await index.get_documents(
@@ -129,6 +131,11 @@ async def api_doc(
             filter=f'type = "original" AND sentence_num = {sentence_num}',
             limit=1
         )
+        elements = await index.get_documents(
+            filter=f'type = "element" AND sentence_num = "{sentence_num}"',
+            limit=3000
+        )
+
         doc = doc.results[0] if doc.results else {'text':""}
         doc['text']=md.convert(doc['text'])
 
@@ -137,6 +144,7 @@ async def api_doc(
         name="document_info.html",
         context={
             "doc_info": doc_info.results[0] if doc_info.results else {},
+            "elements": elements.results,
             "doc": doc,
         },
     )

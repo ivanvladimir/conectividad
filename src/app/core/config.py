@@ -124,6 +124,9 @@ class EnvironmentOption(Enum):
     PRODUCTION = "production"
 
 
+class CORSSettings(BaseSettings):
+    BACKEND_CORS_ORIGINS: list[str] = config("BACKEND_CORS_ORIGINS", cast=lambda v: [s.strip() for s in v.split(',')], default=[])
+
 class EnvironmentSettings(BaseSettings):
     ENVIRONMENT: EnvironmentOption = config("ENVIRONMENT", default=EnvironmentOption.LOCAL)
 
@@ -141,6 +144,7 @@ class Settings(
     DefaultRateLimitSettings,
     CRUDAdminSettings,
     EnvironmentSettings,
+    CORSSettings,
 ):
     pass
 
