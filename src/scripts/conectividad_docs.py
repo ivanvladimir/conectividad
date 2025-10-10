@@ -160,7 +160,8 @@ def flatten_blocks(block, data={},parent_page=None):
             "block_type": block_type,
             "type":"element",
             "html": block.html if hasattr(block, 'html') else "",
-            "text": text
+            "text": text,
+            "polygon": block.polygon if hasattr(block, 'polygon') else None,
         }
         block_data.update(data)
         
@@ -217,8 +218,10 @@ async def extract_sentencias_(ini, fin, update):
             data={}
             data={'sentence_num':doc['sentence_num'],
                   'text':original,
-                  'filenames': {'pdf': file_path},
                   'type':'original'}
+
+            doc.update({'filenames': {'pdf': file_path}})
+            await index.update_documents([doc])
 
             if hasattr(rendered, 'children'):
                 root_blocks = rendered.children
@@ -239,7 +242,6 @@ async def extract_sentencias_(ini, fin, update):
                 doc['document_id']=stats.number_of_documents+i+1
                 doc['oder']=i
 
-            print(">>>> ", documents)
             await index.add_documents(documents)
         
     return None

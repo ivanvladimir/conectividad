@@ -1,7 +1,7 @@
 from typing import Annotated, Any, cast, AsyncGenerator
 
 from fastapi import APIRouter, Depends, Request, Form
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -143,6 +143,7 @@ async def api_doc(
         request=request,
         name="document_info.html",
         context={
+            "sentence_num": sentence_num,
             "doc_info": doc_info.results[0] if doc_info.results else {},
             "elements": elements.results,
             "doc": doc,
@@ -151,4 +152,24 @@ async def api_doc(
     return response
 
    
+@router.get("/pdf/{sentence_num}", response_class=FileResponse)
+async def api_pdf(
+    request: Request,
+    db: Annotated[AsyncSession, Depends(async_get_db)],
+    searchdb: Annotated[AsyncGenerator, Depends(async_get_search)],
+    sentence_num: int = 0,
+) -> FileResponse:
+
+    async with searchdb as client:
+        index = client.index("conectividad_docs")
+        doc = await index.get_documents(
+            filter=f'type = "description" AND sentence_num = "{sentence_num}"',
+            limit=1,
+        )
+
+    if len(doc.results)==0:
+        raise HTTPException(status_code=404, detail=f"Pdf for sentece num {senence_num} not found")
+
+    return FileResponse(doc.results[0]["filenames"]['pdf'], media_type="application/pdf")
+
 

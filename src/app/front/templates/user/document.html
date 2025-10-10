@@ -2,7 +2,7 @@
 
 {% block title %}Sentencia {{sentence_num}}{% endblock %}
 {% block extra_links %} 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" type="module"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/5.4.149/pdf.min.mjs" type="module"></script>
 {% endblock %}
 
 {% block restricted_content %}
@@ -12,124 +12,138 @@
       hx-swap="innerHTML">
 </div>
 
-  <div class="container" x-data="pdfViewer()">
-        <h1>PDF.js Viewer with Alpine.js</h1>
-        
-        <div x-show="error" class="error" x-text="error"></div>
-        
-        <div class="controls">
-            <input 
-                type="text" 
-                x-model="pdfUrl" 
-                placeholder="Enter PDF URL"
-                style="flex: 1; min-width: 300px;"
-            >
-            <button @click="loadPDF">Load PDF</button>
-            
-            <div class="page-info" x-show="numPages > 0">
-                <button @click="prevPage" :disabled="pageNum <= 1">Previous</button>
-                <span>Page <input type="number" x-model.number="pageNum" @change="renderPage" min="1" :max="numPages" style="width: 60px;"> of <span x-text="numPages"></span></span>
-                <button @click="nextPage" :disabled="pageNum >= numPages">Next</button>
-            </div>
-            
-            <div>
-                <label>Scale: </label>
-                <input type="range" x-model.number="scale" @input="renderPage" min="0.5" max="3" step="0.1" style="width: 100px;">
-                <span x-text="Math.round(scale * 100) + '%'"></span>
-            </div>
-        </div>
-        
-        <div class="canvas-container">
-            <canvas id="pdfCanvas"></canvas>
-        </div>
-    </div>
+<div class="container" x-data="pdfViewer()" x-init="loadDefaultPDF()">
+      <div x-show="message" :class="messageType" class="message">
+          <span x-text="message"></span>
+      </div>
+
+      <div x-show="loaded" class="canvas-container">
+          <canvas id="pdfCanvas"></canvas>
+      </div>
+
+      <div x-show="loaded" class="page-controls">
+          <button @click="previousPage()" :disabled="pageNum <= 1">← Previous</button>
+          <div class="page-info">
+              <input 
+                  type="number" 
+                  x-model.number="pageNum" 
+                  @change="goToPage()"
+                  :min="1"
+                  :max="pageCount"
+              >
+              <span x-text="` / ${pageCount}`"></span>
+          </div>
+          <button @click="nextPage()" :disabled="pageNum >= pageCount">Next →</button>
+      </div>
+</div>
 
 {% endblock %}
 
 {% block script %}
 <script>
-        // Set the workerSrc for PDF.js
+function initPDF() {
+            if (typeof pdfjsLib !== 'undefined') {
+                pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/5.4.149/pdf.worker.min.mjs';
+            } else if (typeof pdfjs !== 'undefined') {
+                pdfjs.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/5.4.149/pdf.worker.min.mjs';
+            }
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initPDF);
+        } else {
+            initPDF();
+        }
 
         function pdfViewer() {
+            let pdf;
             return {
-                pdfUrl: 'https://www.corteidh.or.cr/docs/casos/articulos/seriec_12_esp.pdf',
-                pdfDoc: null,
+                loaded: false,
                 pageNum: 1,
-                numPages: 0,
-                scale: 1.5,
-                error: '',
-                
-                init() {
-                  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-                    // Optionally load a default PDF on initialization
-                  //this.loadPDF();
-                },
-                
-                async loadPDF() {
-                    this.error = '';
-                    
-                    if (!this.pdfUrl) {
-                        this.error = 'Please enter a PDF URL';
-                        return;
-                    }
-                    
+                pageCount: 0,
+                loading: false,
+                message: '',
+                messageType: '',
+
+                async loadDefaultPDF() {
                     try {
-                        // Load the PDF document
-                        const loadingTask = pdfjsLib.getDocument(this.pdfUrl);
-                        this.pdfDoc = await loadingTask.promise;
-                        this.numPages = this.pdfDoc.numPages;
+                        // Load a sample PDF from Mozilla's PDF.js repo
+                       const url = '{{url_for("api_pdf", sentence_num=sentence_num)}}';
+                        const response = await fetch(url);
+                        const arrayBuffer = await response.arrayBuffer();
+                        
+                        const lib = typeof pdfjsLib !== 'undefined' ? pdfjsLib : pdfjs;
+                        pdf = await lib.getDocument(arrayBuffer).promise;
+
+                        this.loaded = true;
+                        
+                        this.pageCount = pdf.numPages;
                         this.pageNum = 1;
-                        
-                        // Render the first page
-                        await this.renderPage();
+                        this.showMessage(`PDF loaded: ${pdf.numPages} pages`, 'success');
+                        await this.renderPage(1);
+                        this.loaded = true;
                     } catch (err) {
-                        this.error = 'Error loading PDF: ' + err.message;
+                        this.showMessage('Error loading PDF: ' + err.message, 'error');
                         console.error(err);
+                    } finally {
+                        this.loading = false;
                     }
                 },
-                
-                async renderPage() {
-                    if (!this.pdfDoc) return;
-                    
+
+                async renderPage(pageNum) {
+                    this.loading = true;
                     try {
-                        // Get the page
-                        const page = await this.pdfDoc.getPage(this.pageNum);
-                        
+                        const page = await pdf.getPage(pageNum);
+                        const scale = 1;
+                        const viewport = page.getViewport({ scale });
                         const canvas = document.getElementById('pdfCanvas');
                         const context = canvas.getContext('2d');
                         
-                        // Calculate viewport
-                        const viewport = page.getViewport({ scale: this.scale });
-                        
-                        // Set canvas dimensions
-                        canvas.height = viewport.height;
                         canvas.width = viewport.width;
-                        
-                        // Render PDF page
+                        canvas.height = viewport.height;
+
                         const renderContext = {
                             canvasContext: context,
                             viewport: viewport
                         };
-                        
+
                         await page.render(renderContext).promise;
+                        this.loading = false;
                     } catch (err) {
-                        this.error = 'Error rendering page: ' + err.message;
+                        this.showMessage('Error rendering page: ' + err.message, 'error');
                         console.error(err);
+                        this.loading = false;
                     }
                 },
-                
+
                 async nextPage() {
-                    if (this.pageNum >= this.numPages) return;
-                    this.pageNum++;
-                    await this.renderPage();
+                    if (this.pageNum < this.pageCount) {
+                        this.pageNum++;
+                        await this.renderPage(this.pageNum);
+                    }
                 },
-                
-                async prevPage() {
-                    if (this.pageNum <= 1) return;
-                    this.pageNum--;
-                    await this.renderPage();
+
+                async previousPage() {
+                    if (this.pageNum > 1) {
+                        this.pageNum--;
+                        await this.renderPage(this.pageNum);
+                    }
+                },
+
+                async goToPage() {
+                    if (this.pageNum >= 1 && this.pageNum <= this.pageCount) {
+                        await this.renderPage(this.pageNum);
+                    }
+                },
+
+                showMessage(msg, type) {
+                    this.message = msg;
+                    this.messageType = type;
+                    setTimeout(() => {
+                        this.message = '';
+                    }, 3000);
                 }
-            }
+            };
         }
-    </script>
+</script>
 {% endblock %}
