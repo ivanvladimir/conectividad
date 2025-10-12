@@ -12,7 +12,8 @@ from ...core.exceptions.http_exceptions import ForbiddenException, NotFoundExcep
 from ...core.utils.cache import cache
 from ...crud.crud_users import crud_users
 from ...schemas.user import UserRead
-import re 
+import re
+import json
 import markdown
 
 re_emph = re.compile(r"(<em>.*?</em>)")
@@ -53,9 +54,9 @@ async def api_search(
     ]
 
     results_ = []
-    for r in results:
-        for m in re_emph.finditer(r["text"]):
-            results_.append(r.copy())
+    for r_ in results:
+        for m in re_emph.finditer(r_["text"]):
+            results_.append(r_.copy())
             r = results_[-1]
             text_before = (
                 r["text"][: m.start()].replace("<em>", "").replace("</em>", "")
@@ -69,6 +70,8 @@ async def api_search(
                 text_after.split()[:num_words] if text_after.split() else []
             )
             r['hit']=r['infix']
+            r['page']=int(r_['page'])
+            r['polygon']=json.dumps([ {"x":float(l[0]), "y":float(l[1])} for l in r['polygon']])
 
     response = templates.TemplateResponse(
         request=request,

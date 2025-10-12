@@ -15,8 +15,9 @@
       <div class="list-col-wrap">
   <div class="breadcrumbs text-sm">
       <ul>
-    <li class="bg-base-300"><a href="{{url_for('doc',sentence_num=r['sentence_num'])}}">Sentencia {{r['sentence_num']}}</a></li>
-    <li class="bg-base-300">Section {{r['section']}}</li>
+        <li class="bg-base-300"><a href="{{url_for('doc',sentence_num=r['sentence_num'])}}?page={{r['page']+1}}&polygon={{r['polygon']}}&q={{query}}">Sentencia {{r['sentence_num']}}</a></li>
+    <li class="bg-base-300"><a href="{{url_for('doc',sentence_num=r['sentence_num'])}}?page={{r['page']+1}}&polygon={{r['polygon']}}&q={{query}}">Sección {{r['section']}}</a></li>
+    <li class="bg-base-300"><a href="{{url_for('doc',sentence_num=r['sentence_num'])}}?page={{r['page']+1}}&polygon={{r['polygon']}}&q={{query}}">Página {{r['page']+1}}</a></li>
     {% if r['num_par'] %}<li class="bg-base-300">Parr. {{r['num_par']}}</li>{% endif %}
       </ul>
   </div>
