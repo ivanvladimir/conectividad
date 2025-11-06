@@ -1,7 +1,7 @@
 from typing import Annotated, Any, cast, AsyncGenerator
 
 from fastapi import APIRouter, Depends, Request, Form
-from fastapi.responses import HTMLResponse, FileResponse
+from fastapi.responses import HTMLResponse, FileResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,6 +15,7 @@ from ...schemas.user import UserRead
 import re
 import json
 import markdown
+import os
 
 re_emph = re.compile(r"(<em>.*?</em>)")
 
@@ -110,6 +111,7 @@ async def api_docs(
             "results": docs.results,
             "page": page,
             "last_page": ((page + 1) * page_size + 1) > docs.total,
+            'active_page':'docs',
         },
     )
     return response
@@ -122,7 +124,6 @@ async def api_doc(
     sentence_num: int = 0,
 ) -> HTMLResponse:
 
-    md = markdown.Markdown(extensions=['attr_list'])
     async with searchdb as client:
         index = client.index("conectividad_docs")
         doc_info = await index.get_documents(
@@ -140,7 +141,6 @@ async def api_doc(
         )
 
         doc = doc.results[0] if doc.results else {'text':""}
-        doc['text']=md.convert(doc['text'])
 
     response = templates.TemplateResponse(
         request=request,
@@ -154,7 +154,53 @@ async def api_doc(
     )
     return response
 
-   
+@router.post("/stats", status_code=201)
+async def api_stats(
+    request: Request,
+    db: Annotated[AsyncSession, Depends(async_get_db)],
+    searchdb: Annotated[AsyncGenerator, Depends(async_get_search)],
+) -> HTMLResponse:
+
+    async with searchdb as client:
+        index = client.index("conectividad_docs")
+        facets = await index.search(
+            "", facets=['type']
+        )
+        index_g = client.index("conectividad_graph")
+        facets_g = await index_g.search(
+            "", facets=['type']
+        )
+        docs= await index.get_documents(filter='type="description"', sort=['sentence_num:desc'], limit=3000)
+        docs_= [d['sentence_num'] for d in docs.results]
+        originals= await index.get_documents(filter='type="original"', limit=3000)
+        originals_={d['sentence_num']: True for d in originals.results}
+        elements= await index.get_documents(filter='type = "element" AND oder = 1', limit=3000)
+        elements_={d['sentence_num']: True for d in elements.results}
+        nodes= await index_g.get_documents(filter='type="sentence"', limit=3000)
+        nodes_={d['sentence_num']: True for d in nodes.results}
+
+        pdf_files = set(os.listdir('src/data'))
+        pdf_files = {d['sentence_num']:True for d in docs.results if d['links']['pdf'].split('/')[-1] in pdf_files}
+
+        detail=[ (sentence_num, 
+                 True if sentence_num in originals_ else False,
+                 True if sentence_num in elements_ else False,
+                 True if sentence_num in nodes_ else False,
+                 True if sentence_num in pdf_files else False,
+                  )    for sentence_num in docs_]
+    response = templates.TemplateResponse(
+        request=request,
+        name="stats.html",
+        context={
+            'total_types':facets.facet_distribution['type'],
+            'total_graphs':facets_g.facet_distribution['type'],
+            'detail': detail,
+            'active_page':'info'
+        },
+    )
+    return response
+
+  
 @router.get("/pdf/{sentence_num}", response_class=FileResponse)
 async def api_pdf(
     request: Request,

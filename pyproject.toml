@@ -44,6 +44,7 @@ dependencies = [
     "mammoth>=1.11.0",
     "marker-pdf>=1.10.1",
     "itsdangerous>=2.2.0",
+    "weasyprint>=66.0",
 ]
 
 [project.optional-dependencies]

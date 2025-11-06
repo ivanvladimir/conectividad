@@ -4,11 +4,15 @@ import logging
 import uuid
 import re
 import os
+import sys
+import time
+import hashlib
+import html
 import dateparser
 import requests
 from rich.progress import track
 from datetime import UTC, datetime
-from playwright.sync_api import sync_playwright, expect
+from playwright.async_api import async_playwright, expect
 
 from meilisearch_python_sdk import AsyncClient
 import pymupdf4llm
@@ -17,8 +21,11 @@ from marker.models import create_model_dict
 from marker.output import text_from_rendered
 from marker.config.parser import ConfigParser
 import json
+from openai import OpenAI
+from pydantic import BaseModel
+from typing import Optional, List
 from dotenv import load_dotenv
-
+from collections import Counter
 
 from ..app.core.db.database import async_engine, local_session
 
@@ -113,16 +120,10 @@ def get_info_sentencias(main_url: str = "https://www.corteidh.or.cr/casos_senten
     loop = asyncio.get_event_loop()
     loop.run_until_complete(get_info_sentencias_(sentencias,update))
 
-def download_file(url,odir,simulate=False):
+def download_file(url, odir, simulate=False):
     local_filename = url.split('/')[-1]
-    # NOTE the stream=True parameter
-    if not simulate:
-        r = requests.get(url, stream=True)
-        with open(os.path.join(odir,local_filename), 'wb') as f:
-            for chunk in r.iter_content(chunk_size=1024):
-                if chunk: # filter out keep-alive new chunks
-                    f.write(chunk)
-    return os.path.join(odir,local_filename)
+    output_path=os.path.join(odir,local_filename)
+    return output_path
 
 re_page = re.compile(r'/page/(?P<page>\d+)/.*')
 
@@ -146,7 +147,11 @@ def flatten_blocks(block, data={},parent_page=None):
     
     # Convert block to dict
     if hasattr(block, 'model_dump'):
-        block_dict = block.model_dump()
+        try:
+            block_dict = block.model_dump()
+        except TypeError:
+            print(block)
+            sys.exit(1)
     elif hasattr(block, 'dict'):
         block_dict = block.dict()
     else:
@@ -209,6 +214,9 @@ async def extract_sentencias_(ini, fin, update):
                 break
             documents=[]
             file_path=download_file(doc['links']['pdf'],'src/data/',simulate=False)
+            if not file_path:
+                print("Error downloading file for sentencia",doc['sentence_num'])
+                continue
             rendered = converter(file_path)
     
             extracted_blocks = []
@@ -261,6 +269,7 @@ def extract_sentencias(ini: int = None, fin: int = None, update: bool = False):
 re_section = re.compile(r'>\s*(?P<section>[IVXL]+)\s*<')
 re_portanto = re.compile(r'^(?:<h\d><b>Por tanto,?\s+</b></h\d>|<h\d>\d+.<b>\s+POR\s+TANTO,\s+</b></h\d>)$')
 re_par = re.compile(r'^<li block-type="ListItem">(?P<num>\d+)\.? ')
+re_country = re.compile(r'[vV]s\.? (?P<country>.*)$')
 async def update_metadata_(ini, fin, update):
     load_dotenv()
 
@@ -285,7 +294,6 @@ async def update_metadata_(ini, fin, update):
                 limit=5000)
             eles_=[]
             for ele in eles.results:
-                print(">>",ele['text'],ele)
                 m=re_section.search(ele['html'])
                 if m:
                     section=m.group('section')
@@ -305,7 +313,14 @@ async def update_metadata_(ini, fin, update):
                 if not section in ["conclusion"] and par:
                     ele['num_par']=par
                 eles_.append(ele)
-            await index.update_documents(eles_)
+            m=re_country.search(doc['caso'])
+            if m:
+                doc['country']=m.group('country').strip()
+            else:
+                doc['country']=None
+            eles_.append(doc)
+
+            await index.update_documents(eles_, primary_key = "document_id")
 
 @app.command()
 def update_metadata(ini: int = None, fin: int = None, update: bool = False):
@@ -320,8 +335,228 @@ def update_metadata(ini: int = None, fin: int = None, update: bool = False):
     loop.run_until_complete(update_metadata_(ini, fin, update))
 
 
+class Article(BaseModel):
+    number_article: list[str]
+    number_paragraphs: Optional[list[str]]
 
-async def add_filter_(filter:str):
+class Citation(BaseModel):
+    match_text: str
+    law_name: str
+    date: Optional[str]
+    articles: List[Article]
+    additional_info: Optional[str]
+
+class Citations(BaseModel):
+    citations: List[Citation]
+
+async def create_graph_(ini, fin, update):
+    load_dotenv()
+
+    gpt = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+    
+    with open('cached_citations.json') as f:
+        cached_citations = json.load(f)
+
+    async with AsyncClient('http://localhost:7700', os.getenv("MEILI_MASTER_KEY")) as client:
+        index_docs = client.index("conectividad_docs")
+        try:
+            index = client.index("conectividad_graph")
+            await index.get_documents(
+                filter=f"name = 'AAAA'",
+                limit=1)
+        except:
+            index = await client.create_index('conectividad_graph', primary_key= 'id')
+            index = client.index("conectividad_graph")
+
+        docs=await index_docs.get_documents(
+            filter="type = 'description'",
+            sort=["sentence_num:asc"],
+            limit=3000)
+
+        for i,doc in enumerate(docs.results):
+            nodes=({},{})
+            links=({},{})
+
+            sentence_num=doc['sentence_num']
+            if ini and sentence_num<ini:
+                continue
+            if fin and sentence_num>fin:
+                break
+
+            print("Sentence num",sentence_num)
+            node=await index.get_documents(
+                filter=f"sentence_num = {sentence_num} AND type = 'sentence'",
+                limit=1)
+            if len(node.results)==0:
+                d=datetime.fromisoformat(doc['date'])
+                node={
+                    'type':'sentence',
+                    'sentence_num':doc['sentence_num'],
+                    'country':doc.get('country',None),
+                    'name':html.escape(doc.get('caso',None)),
+                    'year':d.year,
+                    'count':1,
+                }
+                new_node_flag=True
+            else:
+                new_node_flag=False
+                node= node.results[0]
+                node['count']+=1
+            source=node
+
+            eles=await index_docs.get_documents(
+                filter=f'type = "element" AND sentence_num = {sentence_num}',
+                limit=10000)
+            eles_=[]
+            for i,ele in track(enumerate(eles.results), total=len(eles.results), description="Processing elements..."):
+                id_string=hashlib.sha256(ele['text'].encode()).hexdigest()
+                if id_string in cached_citations:
+                    citations=cached_citations[id_string]
+                else:
+                    completion = gpt.chat.completions.parse(
+                        model="gpt-4o-mini",
+                        messages=[
+                            {"role": "system", "content": "You are a helpful legal assistant that extracts legal citations from text."},
+                            {"role": "user", 
+                             "content": 
+                                "Extract all legal citations from the following legal text in Spanish. Extract the name of the mentioned law in the law_name field. For the articles, extract only the article numbers into a list in the articles field. In case they use a dot format, report it in that format (e.g., 10.4). Do not include any textual information in articles. If a paragraph is explicitly mentioned, please associate it with the right article; only report the number, without any textual information. If the law mentions any other information that does not belong to any field, add it to the additional_info field, but it has to appear in the text. In match_text, put the minimal text from which the data is being extracted. If no citations are found, return an empty array.\n\nText: '''"+ele['text']+"'''"}
+
+                        ],
+                        response_format=Citations,
+                    )
+                    citations=completion.choices[0].message.parsed
+                    time.sleep(1)
+                    citations=citations.model_dump()
+                    cached_citations[id_string]=citations
+                if i%2==0:
+                    json.dump(cached_citations, open('cached_citations.json','w'), indent=2)
+                for c in citations['citations']:
+                    citation_name=html.escape(f"{c['law_name']} {c['date']}" if c['date'] else f"{c['law_name']}")
+                    node=await index.get_documents(
+                        filter=f'name="{citation_name}"',
+                        limit=1)
+
+                    if len(node.results)==0:
+                        cited_articles = {f"{a['number_article'][0]}":1 for a in c['articles']}
+                        if citation_name in nodes[1]:
+                            node=nodes[1][citation_name]
+                            node['count']+=1
+                            if 'articles' in node and len(node['articles'])>0:
+                                c=Counter(node['articles'])
+                                c.update(cited_articles)
+                                articles = dict(c)
+                            else:
+                                articles = cited_articles
+                            node['articles']=articles
+                        else:
+                            node={
+                                'type':'citation',
+                                'name': citation_name,
+                                'count':1,
+                                'articles':cited_articles
+                            }
+                            nodes[1][citation_name] = node
+                    else:
+                        node=node.results[0]
+                        cited_articles = {f"{a['number_article'][0]}":1 for a in c['articles'] if len(a['number_article'])>0}
+                        if citation_name in nodes[0]:
+                            node=nodes[0][citation_name]
+                            node['count']+=1
+                            if 'articles' in node and len(node['articles'])>0:
+                                c=Counter(node['articles'])
+                                c.update(cited_articles)
+                                articles = dict(c)
+                            else:
+                                articles = cited_articles
+                            node['articles']=articles
+                        else:
+                            if 'articles' in node and len(node['articles'])>0:
+                                c=Counter(node['articles'])
+                                c.update(cited_articles)
+                                articles = dict(c)
+                            else:
+                                articles = cited_articles
+                            node['articles']=articles
+                            nodes[0][citation_name] = node
+
+            # updates
+            stats = await index.get_stats()
+            node_updates = list(nodes[0].values())
+            new_nodes=[]
+            source['id']=stats.number_of_documents+1
+            for j,n in  enumerate(nodes[1].values()):
+                n['id']=stats.number_of_documents+j+2
+                new_nodes.append(n)
+            if new_node_flag:
+                new_nodes.append(source)
+            else:
+                node_updates.append(source)
+            await index.update_documents(node_updates,primary_key = "id")
+            await index.add_documents(new_nodes, primary_key = "id")
+            links=({},{})
+            for n in node_updates:
+                link=await index.get_documents(
+                        filter=f'type="link" AND source={source["id"]} AND target={n["id"]}',
+                        limit=1)
+                if len(link.results)==0:
+                    d=datetime.fromisoformat(doc['date'])
+                    link={
+                        'type':'link',
+                        'country':doc.get('country',None),
+                        'source':source['id'],
+                        'target':n['id'],
+                        'count':1,
+                        'year':d.year,
+                    }
+                    if (link['source'],link['target']) in links[1]:
+                        links[1][link['source'],link['target']]['count']+=1
+                    else:
+                        links[1][link['source'],link['target']]=link
+                else:
+                    links[0][(link.results[0]['source'],link.results[0]['target'])]=link.results[0]
+                    links[0][(link.results[0]['source'],link.results[0]['target'])]['count']+=1
+            for n in new_nodes:
+                link={
+                    'type':'link',
+                    'country':doc.get('country',None),
+                    'source':source['id'],
+                    'target':n['id'],
+                    'year':d.year,
+                    'count':1,
+                }
+                if (link['source'],link['target']) in links[1]:
+                    links[1][(link['source'],link['target'])]['count']+=1
+                else:
+                    links[1][(link['source'],link['target'])]=link
+            link_updates = links[0]
+            await index.update_documents(list(link_updates.values()), primary_key = "id")
+            new_links=links[1]
+            #stats = await index.get_stats()
+            new_links=[]
+            for j,l in enumerate(links[1].values()):
+                l['id']=stats.number_of_documents+len(new_nodes)+j+2
+                new_links.append(l)
+      
+            await index.add_documents(new_links, primary_key = "id")
+            json.dump(cached_citations, open('cached_citations.json','w'), indent=2)
+            nodes=({},{})
+
+@app.command()
+def create_graph(ini: int = None, fin: int = None, update: bool = False):
+    """Update metadata for sentencias
+
+    Parameters:
+
+    Returns:
+
+    None"""
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(create_graph_(ini, fin, update))
+
+
+
+async def add_filter_(filter:str, index: str):
     """ Adds filter for the database async
 
     Parameters:
@@ -334,7 +569,7 @@ async def add_filter_(filter:str):
     load_dotenv()
 
     async with AsyncClient('http://localhost:7700', os.getenv("MEILI_MASTER_KEY")) as client:
-        index = client.index("conectividad_docs")
+        index = client.index(index)
         results=await index.get_filterable_attributes()
         if results:
             await index.update_filterable_attributes(results+filter.split(","))
@@ -343,7 +578,7 @@ async def add_filter_(filter:str):
 
 
 @app.command()
-def add_filter(filter:str):
+def add_filter(filter:str, index: str = "conectividad_docs"):
     """ Adds filter for the database
 
     Parameters:
@@ -355,7 +590,7 @@ def add_filter(filter:str):
     None"""
  
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(add_filter_(filter))
+    loop.run_until_complete(add_filter_(filter, index))
 
 async def add_sortable_(sortable:str):
     """ Adds _sortable_ for the database async
@@ -425,7 +660,7 @@ def show_info():
     loop = asyncio.get_event_loop()
     loop.run_until_complete(show_info_())
 
-async def delete_all_():
+async def delete_all_(index_name: str):
     """ Delete all the documents
 
     Parameters:
@@ -436,12 +671,38 @@ async def delete_all_():
     load_dotenv()
 
     async with AsyncClient('http://localhost:7700', os.getenv("MEILI_MASTER_KEY")) as client:
-        index = client.index("conectividad_docs")
+        index = client.index(index_name)
         task =  await index.delete_all_documents()
 
 
+
+async def delete_segments_(ini: int, fin: int, index_name: str):
+    """ Delete all the documents
+
+    Parameters:
+
+    Returns:
+
+    None"""
+    load_dotenv()
+
+    async with AsyncClient('http://localhost:7700', os.getenv("MEILI_MASTER_KEY")) as client:
+        index = client.index(index_name)
+        if not ini:
+            ini=1
+        if not fin:
+            fin=60000
+        for sentence_num in track(range(ini, fin+1)):
+            docs= await index.get_documents(filter=f'sentence_num = {sentence_num} AND type = "element"', limit=5000)
+            original = await index.get_documents(filter=f'sentence_num = {sentence_num} AND type = "original"', limit=1)
+            ixs = [d['document_id'] for d in docs.results]
+            if len(ixs)>0:
+                await index.delete_documents(ixs)
+            if len(original.results)>0:
+                await index.delete_documents([original.results[0]['document_id']])
+
 @app.command()
-def delete_all():
+def delete_segments(ini: int = None, fin:int = None, index: str = "conectividad_docs"):
     """ Delete all the documents
 
     Parameters:
@@ -451,7 +712,22 @@ def delete_all():
     None"""
  
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(delete_all_())
+    loop.run_until_complete(delete_segments_(ini,fin,index))
+
+
+
+@app.command()
+def delete_all(index: str = "conectividad_docs"):
+    """ Delete all the documents
+
+    Parameters:
+
+    Returns:
+
+    None"""
+ 
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(delete_all_(index))
 
 
 if __name__ == "__main__":

@@ -91,17 +91,53 @@ async def doc(request: Request,
     )
     return response
 
-@router.get("/graphs")
-async def graphs(request: Request) -> HTMLResponse:
+
+@router.get("/stats")
+async def stats(request: Request) -> HTMLResponse:
     """
-    Main user page
+    Display statistics about the sentences
+    """
+    start_time = time.time()
+
+    response = templates.TemplateResponse(
+        request=request,
+        name="user/stats.html",
+        context={"elapsed_time_seconds": f"{time.time() - start_time:2.3f}"},
+    )
+    return response
+
+@router.get("/graph/{kind}")
+async def graph(
+    request: Request,
+    kind: str = 'sentence',
+    ) -> HTMLResponse:
+    """
+    Grafica de grafo
     """
     start_time = time.time()
     response = templates.TemplateResponse(
         request=request,
-        name="user/search.html",
+        name="user/graph.html",
         context={"elapsed_time_seconds": f"{time.time() - start_time:2.3f}",
-                 "active_page":'search'},
+                 "query_params": request.query_params,
+                 "kind": kind,
+                 "active_page":'graph'},
+    )
+    return response
+
+@router.get("/graphs")
+async def graphs(
+    request: Request,
+    ) -> HTMLResponse:
+    """
+    Grafica por sentencia
+    """
+    start_time = time.time()
+    response = templates.TemplateResponse(
+        request=request,
+        name="user/graphs.html",
+        context={"elapsed_time_seconds": f"{time.time() - start_time:2.3f}",
+                 "active_page":'graph'},
     )
     return response
 

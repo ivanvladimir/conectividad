@@ -169,7 +169,7 @@
 
                         await page.render(renderContext).promise;
                         // Draw polygon segments
-                        if(this.pageNum === {{page}}){
+                        if(this.polygon && this.pageNum === {{page}}){
 
                           var fact=scale;
                           context.beginPath();

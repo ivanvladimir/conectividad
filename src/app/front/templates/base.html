@@ -21,6 +21,7 @@ window.APP_CONFIG = {
       verify: "{{ url_for('check_auth_status') }}",
       refresh: "{{ url_for('refresh_access_token') }}",
       logout: "{{ url_for('logout') }}",
+      api_base_graph: "{{ url_for('api_graph') }}",
   },
   baseUrl: "{{ url_for('main') }}",
 };
@@ -33,18 +34,24 @@ window.APP_CONFIG = {
 <!-- Navbar that hides on small screens (hidden sm:flex) -->
 <div class="navbar bg-base-100 shadow-lg hidden sm:flex">
     <div class="navbar-start">
-        <a class="btn btn-ghost text-xl">Conectividad</a>
-        <ul class="menu menu-horizontal px-1">
+      <a class="btn btn-ghost text-xl">Conectividad</a>
+      <ul class="menu menu-horizontal px-1">
             {% for page,label in [('main','Principal'),('docs','Sentencias'),('search','Busqueda'),('graphs','Grafos')] %}
-            {% if active_page == page %}
-            <li><a class="menu-active" href="{{url_for(page)}}">
-            {% else %}
-            <li><a href="{{url_for(page)}}">
-            {% endif %}{{label}}</a></li>
+            <li><a {%if active_page == page%}class="menu-active"{%endif%} href="{{url_for(page)}}">{{label}}</a></li>
             {% endfor %}
-        </ul>
+      </ul>
     </div>
     <div class="navbar-end">
+        <ul class="menu menu-horizontal px-1">
+        <li >
+          <details >
+            <summary >Información</summary>
+            <ul class="bg-base-100 rounded-t-none p-2">
+              <li><a {%if active_page == 'info'%}class="menu-active"{%endif%} href="{{url_for('stats')}}">Estadísticas</a></li>
+            </ul>
+          </details>
+        </li>
+        <li>
         <button 
           x-bind:disabled="isLoggedIn ? false : true"
           class="btn btn-secondary"
@@ -55,6 +62,8 @@ window.APP_CONFIG = {
             <span x-show="!loading">Logout</span>
             <span x-show="loading">Logging out...</span>
         </button>
+        </li>
+        </ul>
     </div>
 </div>
 
