@@ -269,7 +269,7 @@ def extract_sentencias(ini: int = None, fin: int = None, update: bool = False):
 re_section = re.compile(r'>\s*(?P<section>[IVXL]+)\s*<')
 re_portanto = re.compile(r'^(?:<h\d><b>Por tanto,?\s+</b></h\d>|<h\d>\d+.<b>\s+POR\s+TANTO,\s+</b></h\d>)$')
 re_par = re.compile(r'^<li block-type="ListItem">(?P<num>\d+)\.? ')
-re_country = re.compile(r'[vV]s\.? (?P<country>.*)$')
+re_country = re.compile(r'[vV]s\.? (?P<country>Argentina|Barbados|Bolivia|Brasil|Chile|Colombia|Costa Rica|Dominica|Ecuador|El Salvador|Guatemala|Haití|Honduras|Jamaica|México|Nicaragua|Panamá|Paraguay|Perú|Surinam|Uruguay|Venezuela|Trinidad y Tobago)')
 async def update_metadata_(ini, fin, update):
     load_dotenv()
 
@@ -313,7 +313,7 @@ async def update_metadata_(ini, fin, update):
                 if not section in ["conclusion"] and par:
                     ele['num_par']=par
                 eles_.append(ele)
-            m=re_country.search(doc['caso'])
+            m=re_country.search(doc['caso']+" "+doc['tipo'])
             if m:
                 doc['country']=m.group('country').strip()
             else:

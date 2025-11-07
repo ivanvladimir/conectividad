@@ -1,0 +1,64 @@
+{% set country2flagcolor = {
+  'Antigua and Barbuda': ('🇦🇬', '#CE1126'),
+  'Argentina': ('🇦🇷', '#74ACDF'), 
+  'Bahamas': ('🇧🇸', '#00ABC9'),
+  'Barbados': ('🇧🇧', '#00267F'),
+  'Belize': ('🇧🇿', '#003F87'),
+  'Bolivia': ('🇧🇴', '#D52B1E'),
+  'Brasil': ('🇧🇷', '#009B3A'),
+  'Chile': ('🇨🇱', '#D52B1E'),
+  'Colombia': ('🇨🇴', '#FCD116'),
+  'Costa Rica': ('🇨🇷', '#002B7F'),
+  'Cuba': ('🇨🇺', '#CF142B'),
+  'Dominica': ('🇩🇲', '#006B3F'),
+  'República Dominicana': ('🇩🇴', '#002D62'),
+  'Ecuador': ('🇪🇨', '#FFD100'),
+  'El Salvador': ('🇸🇻', '#0F47AF'),
+  'Granada': ('🇬🇩', '#CE1126'),
+  'Guatemala': ('🇬🇹', '#4997D0'),
+  'Guyana': ('🇬🇾', '#009E49'),
+  'Haití': ('🇭🇹', '#00209F'),
+  'Honduras': ('🇭🇳', '#0073CF'),
+  'Jamaica': ('🇯🇲', '#009B3A'),
+  'México': ('🇲🇽', '#006847'),
+  'Nicaragua': ('🇳🇮', '#0067C6'),
+  'Panamá': ('🇵🇦', '#DA121A'),
+  'Paraguay': ('🇵🇾', '#D52B1E'),
+  'Perú': ('🇵🇪', '#D91023'),
+  'San Cristóbal y Nieves': ('🇰🇳', '#CE1126'),
+  'Santa Lucía': ('🇱🇨', '#00A1DE'),
+  'San Vicente y las Granadinas': ('🇻🇨', '#0072C6'),
+  'Surinam': ('🇸🇷', '#377E3F'),
+  'Trinidad y Tobago': ('🇹🇹', '#CE1126'),
+  'Estados Unidos de América': ('🇺🇸', '#B22234'),
+  'Uruguay': ('🇺🇾', '#0038A8'),
+  'Venezuela': ('🇻🇪', '#FCD116')
+} %}
+
+<div class="container w-full px-1 py-1">
+<div class="max-x-2xl mx-auto">
+<div class="container w-full px-1 py-1">
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+      <table class="w-full border-collapse w-96">
+        <thead>
+          <tr class="bg-gray-200">
+            <th class="border border-gray-300 px-3 py-2 text-center text-xs font-semibold w-8">Pais</th>
+            <th class="border border-gray-300 px-3 py-2 text-center text-xs font-semibold w-8">Núm. sentencias</th>
+            <th class="border border-gray-300 px-3 py-2 text-center text-xs font-semibold w-8">Proporción</th>
+          </tr>
+        </thead>
+        <tbody>
+        {%for country, count in total_countries.items()%}
+          <tr>
+            <td class="border border-gray-300 px-2 py-1 text-left text-xs font-medium w-8">{{country2flagcolor[country][0]}}{{country}}</td>
+            <td class="border border-gray-300 p-2 py-1 text-center text-xs font-medium w-8">{{count}}</td>
+            <td class="border border-gray-300 p-2 py-1 text-right text-xs font-medium w-8">{{"{:3.2f}".format(count/total_sentences*100)}}%</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      
+    </div>
+</div>
+</div>
+</div>

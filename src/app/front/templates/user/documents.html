@@ -2,6 +2,10 @@
 
 {% block title %}Lista de sentencias{% endblock %}
 
+{% block extra_links %}
+<script src="https://cdn.jsdelivr.net/npm/heroicons@2.0.18/24/outline/index.js"></script>
+{% endblock %}
+
 {% block restricted_content %}
 
 <div id="data-table" class="overflow-auto"
@@ -18,6 +22,8 @@
         <th>Sentencia</th>
         <th class="w-1/8">Serie</th>
         <th class="w-1/6">Fecha</th>
+        <th>País</th>
+        <th>Acciones</th>
       </tr>
     </thead>
     <tbody id="table-documents">

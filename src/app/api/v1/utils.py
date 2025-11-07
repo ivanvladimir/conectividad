@@ -154,8 +154,8 @@ async def api_doc(
     )
     return response
 
-@router.post("/stats", status_code=201)
-async def api_stats(
+@router.post("/general_stats", status_code=201)
+async def api_general_stats(
     request: Request,
     db: Annotated[AsyncSession, Depends(async_get_db)],
     searchdb: Annotated[AsyncGenerator, Depends(async_get_search)],
@@ -170,6 +170,54 @@ async def api_stats(
         facets_g = await index_g.search(
             "", facets=['type']
         )
+    response = templates.TemplateResponse(
+        request=request,
+        name="stats_general.html",
+        context={
+            'total_types':facets.facet_distribution['type'],
+            'total_graphs':facets_g.facet_distribution['type']
+        },
+    )
+    return response
+
+@router.post("/per_country_stats", status_code=201)
+async def api_per_country_stats(
+    request: Request,
+    db: Annotated[AsyncSession, Depends(async_get_db)],
+    searchdb: Annotated[AsyncGenerator, Depends(async_get_search)],
+) -> HTMLResponse:
+
+    async with searchdb as client:
+        index = client.index("conectividad_docs")
+        facets = await index.search(
+            "", facets=['country']
+        )
+
+    total_docs = sum(facets.facet_distribution['country'].values())
+
+    response = templates.TemplateResponse(
+        request=request,
+        name="stats_per_country.html",
+        context={
+            'total_countries':facets.facet_distribution['country'],
+            'total_sentences':total_docs
+        },
+    )
+    return response
+
+
+
+@router.post("/per_document_stats", status_code=201)
+async def api_per_document_stats(
+    request: Request,
+    db: Annotated[AsyncSession, Depends(async_get_db)],
+    searchdb: Annotated[AsyncGenerator, Depends(async_get_search)],
+) -> HTMLResponse:
+
+    async with searchdb as client:
+        index = client.index("conectividad_docs")
+        index_g = client.index("conectividad_graph")
+
         docs= await index.get_documents(filter='type="description"', sort=['sentence_num:desc'], limit=3000)
         docs_= [d['sentence_num'] for d in docs.results]
         originals= await index.get_documents(filter='type="original"', limit=3000)
@@ -190,15 +238,15 @@ async def api_stats(
                   )    for sentence_num in docs_]
     response = templates.TemplateResponse(
         request=request,
-        name="stats.html",
+        name="stats_per_document.html",
         context={
-            'total_types':facets.facet_distribution['type'],
-            'total_graphs':facets_g.facet_distribution['type'],
             'detail': detail,
             'active_page':'info'
         },
     )
     return response
+
+
 
   
 @router.get("/pdf/{sentence_num}", response_class=FileResponse)

@@ -125,19 +125,18 @@ async def graph(
     )
     return response
 
-@router.get("/graphs")
-async def graphs(
+@router.get("/graphs_per_country")
+async def graphs_per_country(
     request: Request,
     ) -> HTMLResponse:
     """
-    Grafica por sentencia
+    Grafica por país
     """
     start_time = time.time()
     response = templates.TemplateResponse(
         request=request,
-        name="user/graphs.html",
+        name="user/graphs_per_country.html",
         context={"elapsed_time_seconds": f"{time.time() - start_time:2.3f}",
                  "active_page":'graph'},
     )
     return response
-

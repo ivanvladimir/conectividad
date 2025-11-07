@@ -36,9 +36,17 @@ window.APP_CONFIG = {
     <div class="navbar-start">
       <a class="btn btn-ghost text-xl">Conectividad</a>
       <ul class="menu menu-horizontal px-1">
-            {% for page,label in [('main','Principal'),('docs','Sentencias'),('search','Busqueda'),('graphs','Grafos')] %}
+            {% for page,label in [('main','Principal'),('docs','Sentencias'),('search','Busqueda')] %}
             <li><a {%if active_page == page%}class="menu-active"{%endif%} href="{{url_for(page)}}">{{label}}</a></li>
             {% endfor %}
+            <li>
+              <details >
+                <summary >Grafos</summary>
+                <ul class="bg-base-100 rounded-t-none p-2">
+                  <li><a {%if active_page == 'graph'%}class="menu-active"{%endif%} href="{{url_for('graphs_per_country')}}">Por país</a></li>
+                </ul>
+              </details>
+            </li>
       </ul>
     </div>
     <div class="navbar-end">

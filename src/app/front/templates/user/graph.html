@@ -1,0 +1,131 @@
+
+{% extends 'base.html' %}
+
+{% block title %}Grafo de sentencia {{sentence_num}}{% endblock %}
+{% block extra_links %} 
+<script src="https://unpkg.com/@antv/g6@5/dist/g6.min.js"></script>
+{% endblock %}
+
+{% block restricted_content %}
+
+<div class="max-w-8xl mx-auto px-4">
+    <div x-data="jsonFetcher()" class="bg-white rounded-lg shadow-lg p-6" x-init="fetchData()">
+    <h1 class="text-2xl font-bold text-gray-800 mb-6">Grafo {{caso}}</h1>
+        
+        <div x-show="loading" class="mt-6">
+            <div class="flex items-center space-x-2">
+                <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+                <span class="text-gray-600">Loading...</span>
+            </div>
+        </div>
+        
+        <div x-show="error" class="mt-6 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg">
+            <p class="font-semibold">Error:</p>
+            <p x-text="error"></p>
+        </div>
+    
+    <div id="container" style="width: 1200px; height: 600px; background: white"></div>
+    
+  </div>
+   
+</div>
+
+{% endblock %}
+
+{% block script %}
+<script>
+
+  // API Configuration
+  const API_URL = APP_CONFIG.urls.api_base_graph + "/{{kind}}?{{query_params | safe }}";
+  const { Graph } = G6;
+
+  // Fetch function
+  async function getData(url) {
+      const token = localStorage.getItem('access_token');
+      const response = await fetch(url,{
+        method: 'POST',
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json' 
+        },
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      return await response.json();
+  }
+
+  // Alpine component
+  function jsonFetcher() {
+      return {
+          sigma: null,
+          loading: false,
+          error: null,
+
+          async fetchData() {
+              this.loading = true;
+              this.error = null;
+              
+              try {
+                  const data = await getData(API_URL);
+                  console.log(data);
+
+                  const graph = new Graph({
+                    container: 'container',
+                    autoFit: 'view',
+                    data,
+                    node: {
+                      style: {
+                        labelFontSize: 1,
+                        labelWordWrap: false,
+                        labelMaxWidth: '1500%',
+                        labelMaxLines: 1,
+                        labelTextOverflow: 'ellipsis',
+                        labelPlacement: 'bottom',
+                        labelTextAlign: 'center',
+                      },
+                      palette: {
+                        field: 'group',
+                        color: 'tableau',
+                      },
+                    },
+                    edge: {
+                      type: 'polyline',
+                      style: {
+                        stroke: '#1783FF',
+                        endArrow: true, // End arrow
+                        endArrowType: 'triangle',
+                        endArrowSize: 2,
+                        lineWidth: 1,
+                      },
+                    },
+                    layout: {
+                      type: 'd3-force',
+                      manyBody: {},
+                      x: {},
+                      y: {},
+                    },
+                    behaviors: ['drag-element-force','click-select','drag-element','zoom-canvas'],
+                  });
+
+                  graph.render();
+              } catch (err) {
+                  this.error = err.message;
+                  this.data = null;
+              } finally {
+                  this.loading = false;
+              }
+          },
+
+          // Optional: fetch on init
+          init() {
+              // Uncomment to fetch on page load
+              // this.fetchData();
+          }
+      }
+  }
+</script>
+{% endblock %}

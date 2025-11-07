@@ -1,0 +1,44 @@
+
+<div class="container w-full px-1 py-1">
+<div class="max-x-2xl mx-auto">
+<div class="container w-full px-1 py-1">
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+      <table class="w-full border-collapse w-96">
+        <thead>
+          <tr class="bg-gray-200">
+            <th class="border border-gray-300 px-3 py-2 text-center text-xs font-semibold w-8">Sentencia</th>
+            <th class="border border-gray-300 px-3 py-2 text-center text-xs font-semibold w-8">Desc.</th>
+            <th class="border border-gray-300 px-3 py-2 text-center text-xs font-semibold w-8">PDF</th>
+            <th class="border border-gray-300 px-3 py-2 text-center text-xs font-semibold w-8">Ori.</th>
+            <th class="border border-gray-300 px-3 py-2 text-center text-xs font-semibold w-8">Seg.</th>
+            <th class="border border-gray-300 px-3 py-2 text-center text-xs font-semibold w-8">Nodo</th>
+          </tr>
+        </thead>
+        <tbody>
+        {%for sentence_num, original, segment, node, pdf in detail%}
+          <tr>
+            <td class="border border-gray-300 px-2 py-1 text-center text-xs font-medium w-8">{{sentence_num}}</td>
+            <td class="border border-gray-300 p-2 bg-green-500 w-8 text-xs font-medium "></td>
+            <td class="border border-gray-300 p-2 {{'bg-green-500' if pdf else 'bg-red-500'}} w-8 text-xs font-medium "></td>
+            <td class="border border-gray-300 p-2 {{'bg-green-500' if original else 'bg-red-500'}} w-8 text-xs font-medium "></td>
+            <td class="border border-gray-300 p-2 {{'bg-green-500' if segment else 'bg-red-500'}} w-8 text-xs font-medium "></td>
+            <td class="border border-gray-300 p-2 {{'bg-green-500' if node else 'bg-red-500'}} w-8 text-xs font-medium "></td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      
+      <div class="p-4 bg-gray-50 border-t border-gray-300 flex gap-4 text-sm">
+        <div class="flex items-center gap-2">
+          <div class="w-4 h-4 bg-green-500 border border-gray-300"></div>
+          <span>Procesado</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <div class="w-4 h-4 bg-red-500 border border-gray-300"></div>
+          <span>Faltante</span>
+        </div>
+      </div>
+    </div>
+</div>
+</div>
+</div>

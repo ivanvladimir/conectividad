@@ -1,0 +1,78 @@
+
+{% extends 'base.html' %}
+
+{% block title %}Estadísticas{% endblock %}
+
+{% block restricted_content %}
+
+
+<div hx-post="{{url_for('api_general_stats')}}"
+      hx-trigger="load"
+      hx-swap="innerHTML">
+</div>
+
+<div class="max-w-2xl space-y-6">
+<div x-data="{ open: false, loaded: false }" class="bg-white rounded-lg shadow-lg overflow-hidden m-4">
+    <div 
+        @click="open = !open; if(open && !loaded) { $refs.content.dispatchEvent(new Event('loadContent')); loaded = true; }"
+        class="p-6 bg-violet-500 text-white cursor-pointer flex items-center justify-between"
+    >
+        <div>
+            <h2 class="text-2xl font-bold">Por pais</h2>
+            <p class="text-white text-sm mt-1">Click para abrir/cerrar</p>
+        </div>
+        <button class="p-2 hover:bg-white/20 rounded-full transition-colors">
+        </button>
+    </div>
+
+    <div x-show="open" x-transition>
+        <div 
+            x-ref="content"
+            class="p-6 bg-white"
+            hx-post="{{url_for('api_per_country_stats')}}"
+            hx-trigger="loadContent"
+            hx-indicator="#loading-per-document"
+        >
+          <div id="loading-per-document" class="htmx-indicator text-center py-8">
+              <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+              <p class="text-gray-500 mt-2">Cargando...</p>
+          </div>
+        </div>
+    </div>
+</div>
+</div>
+
+
+<div class="max-w-2xl space-y-6">
+<div x-data="{ open: false, loaded: false }" class="bg-white rounded-lg shadow-lg overflow-hidden m-4">
+    <div 
+        @click="open = !open; if(open && !loaded) { $refs.content.dispatchEvent(new Event('loadContent')); loaded = true; }"
+        class="p-6 bg-violet-500 text-white cursor-pointer flex items-center justify-between"
+    >
+        <div>
+            <h2 class="text-2xl font-bold">Por documeto</h2>
+            <p class="text-white text-sm mt-1">Click para abrir/cerrar</p>
+        </div>
+        <button class="p-2 hover:bg-white/20 rounded-full transition-colors">
+        </button>
+    </div>
+
+    <div x-show="open" x-transition>
+        <div 
+            x-ref="content"
+            class="p-6 bg-white"
+            hx-post="{{url_for('api_per_document_stats')}}"
+            hx-trigger="loadContent"
+            hx-indicator="#loading-per-document"
+        >
+          <div id="loading-per-document" class="htmx-indicator text-center py-8">
+              <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+              <p class="text-gray-500 mt-2">Cargando...</p>
+          </div>
+        </div>
+    </div>
+</div>
+</div>
+
+
+{% endblock %}

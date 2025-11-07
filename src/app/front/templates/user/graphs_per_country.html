@@ -1,0 +1,125 @@
+{% extends 'base.html' %}
+
+{% block title %}Gráficas pot país{% endblock %}
+
+{% block restricted_content %}
+
+  <div class="container mx-auto max-w-2xl">
+        <div 
+            x-data="{
+                selectedCountry: '',
+                countries: {
+                    'Antigua and Barbuda': ['🇦🇬', '#CE1126'],
+                    'Argentina': ['🇦🇷', '#74ACDF'],
+                    'Bahamas': ['🇧🇸', '#00ABC9'],
+                    'Barbados': ['🇧🇧', '#00267F'],
+                    'Belize': ['🇧🇿', '#003F87'],
+                    'Bolivia': ['🇧🇴', '#D52B1E'],
+                    'Brasil': ['🇧🇷', '#009B3A'],
+                    'Chile': ['🇨🇱', '#D52B1E'],
+                    'Colombia': ['🇨🇴', '#FCD116'],
+                    'Costa Rica': ['🇨🇷', '#002B7F'],
+                    'Cuba': ['🇨🇺', '#CF142B'],
+                    'Dominica': ['🇩🇲', '#006B3F'],
+                    'República Dominicana': ['🇩🇴', '#002D62'],
+                    'Ecuador': ['🇪🇨', '#FFD100'],
+                    'El Salvador': ['🇸🇻', '#0F47AF'],
+                    'Granada': ['🇬🇩', '#CE1126'],
+                    'Guatemala': ['🇬🇹', '#4997D0'],
+                    'Guyana': ['🇬🇾', '#009E49'],
+                    'Haití': ['🇭🇹', '#00209F'],
+                    'Honduras': ['🇭🇳', '#0073CF'],
+                    'Jamaica': ['🇯🇲', '#009B3A'],
+                    'México': ['🇲🇽', '#006847'],
+                    'Nicaragua': ['🇳🇮', '#0067C6'],
+                    'Panama': ['🇵🇦', '#DA121A'],
+                    'Paraguay': ['🇵🇾', '#D52B1E'],
+                    'Perú': ['🇵🇪', '#D91023'],
+                    'San Cristóbal y Nieves': ['🇰🇳', '#CE1126'],
+                    'Santa Lucía': ['🇱🇨', '#00A1DE'],
+                    'San Vicente y las Granadinas': ['🇻🇨', '#0072C6'],
+                    'Surinam': ['🇸🇷', '#377E3F'],
+                    'Trinidad y Tobago': ['🇹🇹', '#CE1126'],
+                    'Estados Unidos de América': ['🇺🇸', '#B22234'],
+                    'Uruguay': ['🇺🇾', '#0038A8'],
+                    'Venezuela': ['🇻🇪', '#FCD116']
+                },
+                init() {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    this.selectedCountry = urlParams.get('country') || '';
+                },
+                selectCountry(country) {
+                    this.selectedCountry = country;
+                    const url = new URL(window.location);
+                    url.searchParams.set('country', country);
+                    window.history.pushState({}, '', url);
+                }
+            }"
+            class="card bg-base-100 shadow-xl"
+        >
+            <div class="card-body">
+                <h2 class="card-title mb-4">Selecciona un país</h2>
+                
+                <!-- DaisyUI Dropdown -->
+                <div class="dropdown dropdown-hover w-full">
+                    <div tabindex="0" role="button" class="btn btn-outline w-full justify-between">
+                        <span x-show="!selectedCountry">Selecciona un país...</span>
+                        <span x-show="selectedCountry" class="flex items-center gap-2">
+                            <span x-text="countries[selectedCountry] ? countries[selectedCountry][0] : ''"></span>
+                            <span x-text="selectedCountry"></span>
+                        </span>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </div>
+                    <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow-lg bg-base-100 rounded-box w-full max-h-96 overflow-y-auto flex-nowrap">
+                        <template x-for="(data, country) in countries" :key="country">
+                            <li>
+                                <a 
+                                    @click.prevent="selectCountry(country)"
+                                    :class="{'active': selectedCountry === country}"
+                                    class="flex items-center gap-2"
+                                >
+                                    <span x-text="data[0]" class="text-2xl"></span>
+                                    <span x-text="country"></span>
+                                    <span 
+                                        class="ml-auto w-4 h-4 rounded-full" 
+                                        :style="'background-color: ' + data[1]"
+                                    ></span>
+                                </a>
+                            </li>
+                        </template>
+                    </ul>
+                </div>
+
+                <div x-show="selectedCountry" class="mt-4">
+                    <a  
+                        :href="'{{url_for('graph',kind="filtered")}}?country=' + encodeURIComponent(selectedCountry)"
+                        class="btn btn-primary w-full"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                        </svg>
+                        Grafo de citas
+                    </a>
+                </div>
+
+                <!-- Display current selection -->
+                <div x-show="selectedCountry" class="alert alert-info mt-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-6 h-6">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <div>
+                        <div class="font-bold">Selected Country:</div>
+                        <div class="text-sm flex items-center gap-2">
+                            <span x-text="countries[selectedCountry][0]" class="text-2xl"></span>
+                            <span x-text="selectedCountry"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+{% endblock %}
