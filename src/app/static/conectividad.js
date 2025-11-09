@@ -61,7 +61,7 @@ document.body.addEventListener('htmx:responseError', function(event) {
                     target: originalRequest.target,
                     swap: originalRequest.swap
                 });
-            } else {
+            } else {http://127.0.0.1:8000/graphs_per_country?country=Bahamas
                 // If refresh fails, redirect to login
                 logout();
             }
@@ -411,6 +411,5 @@ class App {
 document.addEventListener('DOMContentLoaded', () => {
     window.app = new App();
 });
-
 
 

@@ -42,20 +42,31 @@
       <table class="w-full border-collapse w-96">
         <thead>
           <tr class="bg-gray-200">
+            <th class="border border-gray-300 px-3 py-2 text-center text-xs font-semibold w-8">Número</th>
             <th class="border border-gray-300 px-3 py-2 text-center text-xs font-semibold w-8">Pais</th>
             <th class="border border-gray-300 px-3 py-2 text-center text-xs font-semibold w-8">Núm. sentencias</th>
             <th class="border border-gray-300 px-3 py-2 text-center text-xs font-semibold w-8">Proporción</th>
+            <th class="border border-gray-300 px-3 py-2 text-center text-xs font-semibold w-8">Total nodos</th>
           </tr>
         </thead>
         <tbody>
         {%for country, count in total_countries.items()%}
           <tr>
+            <td class="border border-gray-300 px-2 py-1 text-left text-xs font-medium w-8">{{loop.index}}</td>
             <td class="border border-gray-300 px-2 py-1 text-left text-xs font-medium w-8">{{country2flagcolor[country][0]}}{{country}}</td>
             <td class="border border-gray-300 p-2 py-1 text-center text-xs font-medium w-8">{{count}}</td>
             <td class="border border-gray-300 p-2 py-1 text-right text-xs font-medium w-8">{{"{:3.2f}".format(count/total_sentences*100)}}%</td>
+            <td class="border border-gray-300 p-2 py-1 text-right text-xs font-medium w-8">{{total_nodes_country.get(country,0) }}</td>
           </tr>
         {% endfor %}
         </tbody>
+        <tfoot>
+            <th></th>
+            <th class="border border-gray-300 px-3 py-2 text-center text-xs font-semibold w-8">Totales</th>
+            <th class="border border-gray-300 px-3 py-2 text-center text-xs font-semibold w-8">{{total_sentences}}</th>
+            <th class="border border-gray-300 px-3 py-2 text-center text-xs font-semibold w-8">Proporción</th>
+            <th class="border border-gray-300 px-3 py-2 text-center text-xs font-semibold w-8">{{total_nodes}}</th>
+        </tfoot>
       </table>
       
     </div>

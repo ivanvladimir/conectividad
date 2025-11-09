@@ -193,14 +193,24 @@ async def api_per_country_stats(
             "", facets=['country']
         )
 
+        index_g = client.index("conectividad_graph")
+        facets_g = await index_g.search(
+            "", filter="type='sentence'", facets=['country'],
+            limit=3000
+        )
+    
+
     total_docs = sum(facets.facet_distribution['country'].values())
+    total_nodes = sum(facets_g.facet_distribution['country'].values())
 
     response = templates.TemplateResponse(
         request=request,
         name="stats_per_country.html",
         context={
             'total_countries':facets.facet_distribution['country'],
-            'total_sentences':total_docs
+            'total_nodes_country':facets_g.facet_distribution['country'],
+            'total_sentences':total_docs,
+            'total_nodes':total_nodes
         },
     )
     return response

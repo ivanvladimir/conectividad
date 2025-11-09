@@ -438,7 +438,7 @@ async def create_graph_(ini, fin, update):
                         limit=1)
 
                     if len(node.results)==0:
-                        cited_articles = {f"{a['number_article'][0]}":1 for a in c['articles']}
+                        cited_articles = {f"{a['number_article'][0]}":1 for a in c['articles'] if len(a['number_article'])>0}
                         if citation_name in nodes[1]:
                             node=nodes[1][citation_name]
                             node['count']+=1
